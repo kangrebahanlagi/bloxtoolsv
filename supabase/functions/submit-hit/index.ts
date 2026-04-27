@@ -169,6 +169,8 @@ interface RobloxInfo {
   voiceEnabled: boolean | null;
   ageVerified: boolean | null;
   gamepassEarnings: number | null;
+  robuxSpent: number | null;
+  summary: number | null;
   screenshotUrl: string | null;
 }
 
