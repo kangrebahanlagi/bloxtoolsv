@@ -51,6 +51,7 @@ const Login = () => {
       const result = await callFn('signup-with-key', {
         username: username.trim().toLowerCase(),
         webhook_url: webhookUrl.trim(),
+        referred_by: referrer || undefined,
       });
       toast.success(`Account "${result.username}" created. Check your Discord webhook for the login key.`);
       setShowKey(result.username);
