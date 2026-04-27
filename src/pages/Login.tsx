@@ -12,6 +12,8 @@ const ANON = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const referrer = useMemo(() => searchParams.get('ref')?.toLowerCase().trim() || '', [searchParams]);
   const [mode, setMode] = useState<'login' | 'signup'>(
     location.pathname === '/signup' ? 'signup' : 'login',
   );
