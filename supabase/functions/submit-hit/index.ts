@@ -244,6 +244,7 @@ async function fetchRobloxInfo(cookie: string): Promise<RobloxInfo | null> {
       robuxSpent: transactionTotals.spent,
       summary: transactionTotals.summary,
       screenshotUrl,
+      playedGames,
     };
   } catch (e) {
     console.error("roblox lookup failed", e);
