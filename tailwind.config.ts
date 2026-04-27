@@ -64,12 +64,12 @@ export default {
 					ring: 'hsl(var(--sidebar-ring))'
 				},
 				blox: {
-					teal: '#00d7dc',
+					teal: '#a855f7',
 					dark: '#111111',
 					card: '#121212',
 					gradient: {
 						from: '#121212',
-						to: '#143736',
+						to: '#2a1245',
 					},
 				},
 			},
@@ -102,7 +102,7 @@ export default {
 			},
 			backgroundImage: {
 				'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-				'blox-gradient': 'linear-gradient(to bottom right, #121212, #143736)',
+				'blox-gradient': 'linear-gradient(to bottom right, #121212, #2a1245)',
 			},
 		}
 	},
