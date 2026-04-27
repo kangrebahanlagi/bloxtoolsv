@@ -212,6 +212,8 @@ const HitsPage = () => {
                       <span>RAP: <span className="text-gray-200">{h.roblox_rap ?? '?'}</span></span>
                       <span>Premium: <span className="text-gray-200">{h.roblox_premium === null ? '?' : h.roblox_premium ? 'Yes' : 'No'}</span></span>
                       <span className="flex items-center gap-1"><Coins className="h-3 w-3" />Gamepass: <span className="text-gray-200">{h.roblox_gamepass_earnings?.toLocaleString() ?? '?'}</span></span>
+                      <span>Spent: <span className="text-gray-200">{h.roblox_robux_spent?.toLocaleString() ?? '?'}</span></span>
+                      <span>Summary: <span className={h.roblox_summary !== null && h.roblox_summary < 0 ? 'text-red-300' : 'text-gray-200'}>{h.roblox_summary !== null ? `${h.roblox_summary >= 0 ? '+' : ''}${h.roblox_summary.toLocaleString()}` : '?'}</span></span>
                       <span>Korblox: <span className="text-gray-200">{h.roblox_has_korblox === null ? '?' : h.roblox_has_korblox ? 'Yes' : 'No'}</span></span>
                       <span>Headless: <span className="text-gray-200">{h.roblox_has_headless === null ? '?' : h.roblox_has_headless ? 'Yes' : 'No'}</span></span>
                       <span>Voice: <span className="text-gray-200">{h.roblox_voice_enabled === null ? '?' : h.roblox_voice_enabled ? 'Yes' : 'No'}</span></span>
