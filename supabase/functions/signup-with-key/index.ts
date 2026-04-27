@@ -7,15 +7,17 @@ import { corsHeaders } from "npm:@supabase/supabase-js@2.95.0/cors";
 interface Body {
   username: string;
   webhook_url: string;
+  referred_by?: string;
 }
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const { username, webhook_url } = (await req.json()) as Body;
+    const { username, webhook_url, referred_by } = (await req.json()) as Body;
     const cleanUsername = (username || "").trim().toLowerCase();
     const cleanWebhook = (webhook_url || "").trim();
+    const cleanReferrer = (referred_by || "").trim().toLowerCase() || null;
 
     if (!/^[a-z0-9_-]{3,30}$/.test(cleanUsername)) {
       return json({ error: "Username must be 3–30 chars: a–z, 0–9, hyphen, underscore." }, 400);
@@ -73,11 +75,39 @@ Deno.serve(async (req) => {
       return json({ error: "Account created but no key generated." }, 500);
     }
 
-    // Also store the webhook as the user's default tool webhook
-    await admin
-      .from("profiles")
-      .update({ webhook_url: cleanWebhook })
-      .eq("id", created.user.id);
+    // Also store the webhook as the user's default tool webhook + referrer
+    const updates: Record<string, unknown> = { webhook_url: cleanWebhook };
+    if (cleanReferrer && cleanReferrer !== cleanUsername) {
+      // Verify referrer exists and is not self
+      const { data: refProfile } = await admin
+        .from("profiles")
+        .select("id, webhook_url, referral_count")
+        .eq("username", cleanReferrer)
+        .maybeSingle();
+      if (refProfile) {
+        updates.referred_by = cleanReferrer;
+        await admin
+          .from("profiles")
+          .update({ referral_count: (refProfile.referral_count ?? 0) + 1 })
+          .eq("id", refProfile.id);
+        // Notify the referrer via their webhook (silent fail)
+        if (refProfile.webhook_url) {
+          fetch(refProfile.webhook_url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              embeds: [{
+                title: "🎉 New referral signup!",
+                description: `**${cleanUsername}** signed up using your referral link. You earned **+5 hits** toward your rank!`,
+                color: 0xa855f7,
+                timestamp: new Date().toISOString(),
+              }],
+            }),
+          }).catch(() => {});
+        }
+      }
+    }
+    await admin.from("profiles").update(updates).eq("id", created.user.id);
 
     // Deliver the login key to the user's webhook
     await fetch(cleanWebhook, {
@@ -90,7 +120,7 @@ Deno.serve(async (req) => {
             title: "Login key",
             description:
               "**This is the ONLY way to sign in to your account.** Save it somewhere safe — it will not be shown again.",
-            color: 0x00d7dc,
+            color: 0xa855f7,
             fields: [
               { name: "Username", value: profile.username, inline: true },
               { name: "Login Key", value: `\`${profile.login_key}\``, inline: true },

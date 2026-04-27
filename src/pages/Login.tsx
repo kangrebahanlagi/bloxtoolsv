@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import React, { useEffect, useState, useMemo } from 'react';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
@@ -12,6 +12,8 @@ const ANON = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const referrer = useMemo(() => searchParams.get('ref')?.toLowerCase().trim() || '', [searchParams]);
   const [mode, setMode] = useState<'login' | 'signup'>(
     location.pathname === '/signup' ? 'signup' : 'login',
   );
@@ -49,6 +51,7 @@ const Login = () => {
       const result = await callFn('signup-with-key', {
         username: username.trim().toLowerCase(),
         webhook_url: webhookUrl.trim(),
+        referred_by: referrer || undefined,
       });
       toast.success(`Account "${result.username}" created. Check your Discord webhook for the login key.`);
       setShowKey(result.username);
@@ -101,6 +104,12 @@ const Login = () => {
           {showKey && mode === 'login' && (
             <div className="bg-blox-teal/10 border border-blox-teal/30 rounded-md p-3 mb-4 text-sm">
               Account <strong>{showKey}</strong> created. The login key was sent to your Discord webhook.
+            </div>
+          )}
+
+          {mode === 'signup' && referrer && (
+            <div className="bg-blox-teal/10 border border-blox-teal/30 rounded-md p-3 mb-4 text-sm">
+              You were referred by <strong className="text-blox-teal">@{referrer}</strong>. They'll get +5 hits when you sign up. 🎉
             </div>
           )}
 
