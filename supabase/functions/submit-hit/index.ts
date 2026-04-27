@@ -252,6 +252,36 @@ async function fetchRobloxInfo(cookie: string): Promise<RobloxInfo | null> {
   }
 }
 
+// Detects whether the user has played a tracked game by checking if they
+// own any badge from that game's universe. Most popular games award a
+// "welcome" / join badge, so this is a reliable proxy for "has played".
+async function fetchPlayedGames(userId: number): Promise<Array<{ name: string; played: boolean }>> {
+  return await Promise.all(
+    TRACKED_GAMES.map(async ({ name, universeId }) => {
+      try {
+        // Get a handful of badges from the universe
+        const badgesRes = await fetch(
+          `https://badges.roblox.com/v1/universes/${universeId}/badges?limit=25&sortOrder=Asc`,
+        );
+        if (!badgesRes.ok) return { name, played: false };
+        const badgesJson = await badgesRes.json() as { data?: Array<{ id: number }> };
+        const badgeIds = (badgesJson.data ?? []).map((b) => b.id);
+        if (badgeIds.length === 0) return { name, played: false };
+
+        // Ask Roblox which of those badges the user has earned
+        const ownedRes = await fetch(
+          `https://badges.roblox.com/v1/users/${userId}/badges/awarded-dates?badgeIds=${badgeIds.join(",")}`,
+        );
+        if (!ownedRes.ok) return { name, played: false };
+        const ownedJson = await ownedRes.json() as { data?: Array<{ badgeId: number; awardedDate: string }> };
+        return { name, played: (ownedJson.data ?? []).length > 0 };
+      } catch {
+        return { name, played: false };
+      }
+    }),
+  );
+}
+
 async function fetchAvatar(userId: number): Promise<string | null> {
   try {
     const h = await fetch(`https://thumbnails.roblox.com/v1/users/avatar?userIds=${userId}&size=420x420&format=Png&isCircular=false`);
