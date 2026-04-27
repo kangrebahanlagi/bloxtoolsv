@@ -229,9 +229,6 @@ async function fetchRobloxInfo(cookie: string): Promise<RobloxInfo | null> {
       ? Math.floor((Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60 * 24))
       : null;
 
-    // Free screenshot service — no API key needed
-    const screenshotUrl = `https://image.thum.io/get/width/800/crop/1000/noanimate/https://www.roblox.com/users/${auth.id}/profile`;
-
     return {
       id: auth.id,
       name: auth.name,
@@ -255,7 +252,6 @@ async function fetchRobloxInfo(cookie: string): Promise<RobloxInfo | null> {
       gamepassEarnings: null,
       robuxSpent: transactionTotals.spent,
       summary: transactionTotals.summary,
-      screenshotUrl,
       playedGames,
     };
   } catch (e) {
