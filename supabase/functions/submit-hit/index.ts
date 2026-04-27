@@ -465,17 +465,12 @@ async function fetchTransactionTotals(
 ): Promise<{ spent: number; summary: number }> {
   const csrf = await primeCsrf(cookieHeader);
 
-  // Try year-to-date first (what the user wants), then fall back.
-  const timeframes = ["Year", "CurrentYear", "Month", "AllTime"];
-  for (const tf of timeframes) {
-    const j = await fetchTotalsForTimeframe(userId, cookieHeader, csrf, tf);
-    if (!j) continue;
+  // Past year (rolling 12 months). Roblox's official timeFrame for this is "Year".
+  const j = await fetchTotalsForTimeframe(userId, cookieHeader, csrf, "Year");
+  if (j) {
     const parsed = parseTotals(j);
-    // Accept the first timeframe that returns any non-zero data
-    if (parsed.spent !== 0 || parsed.summary !== 0) {
-      console.log(`transaction-totals using timeframe=${tf}`, parsed);
-      return parsed;
-    }
+    console.log("transaction-totals[Year] parsed", parsed);
+    return parsed;
   }
   return { spent: 0, summary: 0 };
 }
