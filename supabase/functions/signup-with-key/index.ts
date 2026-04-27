@@ -7,6 +7,7 @@ import { corsHeaders } from "npm:@supabase/supabase-js@2.95.0/cors";
 interface Body {
   username: string;
   webhook_url: string;
+  referred_by?: string;
 }
 
 Deno.serve(async (req) => {
