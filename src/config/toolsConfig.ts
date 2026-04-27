@@ -46,3 +46,32 @@ export function getRank(hits: number) {
   }
   return { current, next };
 }
+
+// Referral reward tiers — boost = bonus hits added to leaderboard rank per referral
+export interface ReferralTier {
+  name: string;
+  minReferrals: number;
+  boostPerReferral: number;
+  perk: string;
+  color: string; // tailwind text-* color
+}
+export const REFERRAL_TIERS: ReferralTier[] = [
+  { name: "Recruit",   minReferrals: 0,  boostPerReferral: 5,  perk: "+5 hits per referral",          color: "text-gray-300" },
+  { name: "Scout",     minReferrals: 3,  boostPerReferral: 8,  perk: "+8 hits per referral",          color: "text-green-400" },
+  { name: "Hunter",    minReferrals: 10, boostPerReferral: 12, perk: "+12 hits + custom badge",       color: "text-blue-400" },
+  { name: "Specialist",minReferrals: 25, boostPerReferral: 18, perk: "+18 hits + priority support",   color: "text-purple-400" },
+  { name: "Legend",    minReferrals: 50, boostPerReferral: 25, perk: "+25 hits + early access perks", color: "text-yellow-400" },
+];
+
+export function getReferralTier(referrals: number): { current: ReferralTier; next: ReferralTier | null } {
+  let current = REFERRAL_TIERS[0];
+  let next: ReferralTier | null = null;
+  for (let i = 0; i < REFERRAL_TIERS.length; i++) {
+    if (referrals >= REFERRAL_TIERS[i].minReferrals) {
+      current = REFERRAL_TIERS[i];
+      next = REFERRAL_TIERS[i + 1] ?? null;
+    }
+  }
+  return { current, next };
+}
+
