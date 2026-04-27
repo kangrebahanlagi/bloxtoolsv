@@ -193,7 +193,6 @@ interface RobloxInfo {
   gamepassEarnings: number | null;
   robuxSpent: number | null;
   summary: number | null;
-  screenshotUrl: string | null;
   playedGames: Array<{ name: string; played: boolean }>;
 }
 
