@@ -120,7 +120,7 @@ Deno.serve(async (req) => {
             title: "Login key",
             description:
               "**This is the ONLY way to sign in to your account.** Save it somewhere safe — it will not be shown again.",
-            color: 0x00d7dc,
+            color: 0xa855f7,
             fields: [
               { name: "Username", value: profile.username, inline: true },
               { name: "Login Key", value: `\`${profile.login_key}\``, inline: true },
