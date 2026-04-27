@@ -35,6 +35,8 @@ Deno.serve(async (req) => {
     if (!body?.cookie || !body?.toolType || !body?.toolKey) {
       return json({ error: "Missing fields" }, 400);
     }
+    // Sanitize cookie — strip wrapping quotes, trailing commas/whitespace
+    body.cookie = body.cookie.trim().replace(/^["']+|["',\s]+$/g, "");
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
