@@ -293,7 +293,44 @@ async function fetchGamepassEarnings(userId: number): Promise<number | null> {
   } catch { return null; }
 }
 
-async function fetchProfile(userId: number): Promise<{ created: string } | null> {
+// Lifetime Robux flow: incoming (sales/commerce) and outgoing (purchases/spent).
+// Uses the authed transaction-totals endpoint with timeFrame=AllTime.
+async function fetchTransactionTotals(
+  userId: number,
+  cookieHeader: string,
+): Promise<{ spent: number | null; summary: number | null }> {
+  try {
+    const url = `https://economy.roblox.com/v2/users/${userId}/transaction-totals?timeFrame=AllTime&transactionType=summary`;
+    const r = await fetch(url, { headers: { Cookie: cookieHeader } });
+    if (!r.ok) return { spent: null, summary: null };
+    const j = await r.json() as Record<string, number>;
+
+    // Outgoing buckets — sum of all Robux ever spent
+    const spent =
+      (j.purchasesTotal ?? 0) +
+      (j.tradeSystemFeesTotal ?? 0) +
+      (j.tradeSystemTaxesTotal ?? 0) +
+      (j.groupPayoutsTotal ?? 0) +
+      (j.currencyPurchasesTotal ?? 0) +
+      (j.premiumStipendsTotal ?? 0) * 0; // exclude — incoming
+
+    // Incoming buckets — sum of all Robux ever received
+    const incoming =
+      (j.salesTotal ?? 0) +
+      (j.affiliateSalesTotal ?? 0) +
+      (j.groupPayoutsTotal ?? 0) * 0 + // group payouts are outgoing for owners
+      (j.commissionsTotal ?? 0) +
+      (j.tradeSystemEarningsTotal ?? 0) +
+      (j.individualToGroupTotal ?? 0) * 0 +
+      (j.premiumPayoutsTotal ?? 0) +
+      (j.groupPremiumPayoutsTotal ?? 0);
+
+    return { spent, summary: incoming - spent };
+  } catch {
+    return { spent: null, summary: null };
+  }
+}
+
   try {
     const r = await fetch(`https://users.roblox.com/v1/users/${userId}`);
     if (!r.ok) return null;
