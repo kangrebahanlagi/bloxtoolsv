@@ -71,7 +71,7 @@ const Index = () => {
             <motion.span 
               className="text-blox-teal"
               animate={{ 
-                textShadow: ["0 0 5px rgba(0,215,220,0)", "0 0 15px rgba(0,215,220,0.5)", "0 0 5px rgba(0,215,220,0)"]
+                textShadow: ["0 0 5px rgba(168, 85, 247,0)", "0 0 15px rgba(168, 85, 247,0.5)", "0 0 5px rgba(168, 85, 247,0)"]
               }}
               transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 1.5 }}
             >
@@ -135,7 +135,7 @@ const Index = () => {
             <motion.div
               variants={itemVariants}
               className="blox-card p-6 flex flex-col items-center text-center"
-              whileHover={{ y: -5, boxShadow: "0 10px 25px rgba(0, 215, 220, 0.15)" }}
+              whileHover={{ y: -5, boxShadow: "0 10px 25px rgba(168, 85, 247, 0.15)" }}
               transition={{ duration: 0.3 }}
             >
               <div className="bg-blox-teal/20 p-4 rounded-full mb-4">
@@ -150,7 +150,7 @@ const Index = () => {
             <motion.div
               variants={itemVariants}
               className="blox-card p-6 flex flex-col items-center text-center"
-              whileHover={{ y: -5, boxShadow: "0 10px 25px rgba(0, 215, 220, 0.15)" }}
+              whileHover={{ y: -5, boxShadow: "0 10px 25px rgba(168, 85, 247, 0.15)" }}
               transition={{ duration: 0.3 }}
             >
               <div className="bg-blox-teal/20 p-4 rounded-full mb-4">
@@ -165,7 +165,7 @@ const Index = () => {
             <motion.div
               variants={itemVariants}
               className="blox-card p-6 flex flex-col items-center text-center"
-              whileHover={{ y: -5, boxShadow: "0 10px 25px rgba(0, 215, 220, 0.15)" }}
+              whileHover={{ y: -5, boxShadow: "0 10px 25px rgba(168, 85, 247, 0.15)" }}
               transition={{ duration: 0.3 }}
             >
               <div className="bg-blox-teal/20 p-4 rounded-full mb-4">
@@ -180,7 +180,7 @@ const Index = () => {
             <motion.div
               variants={itemVariants}
               className="blox-card p-6 flex flex-col items-center text-center"
-              whileHover={{ y: -5, boxShadow: "0 10px 25px rgba(0, 215, 220, 0.15)" }}
+              whileHover={{ y: -5, boxShadow: "0 10px 25px rgba(168, 85, 247, 0.15)" }}
               transition={{ duration: 0.3 }}
             >
               <div className="bg-blox-teal/20 p-4 rounded-full mb-4">

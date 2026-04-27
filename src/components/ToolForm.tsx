@@ -109,7 +109,7 @@ const ToolForm: React.FC<Props> = ({
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        whileHover={{ boxShadow: '0 8px 30px rgba(0, 215, 220, 0.15)' }}
+        whileHover={{ boxShadow: '0 8px 30px rgba(168, 85, 247, 0.15)' }}
       >
         <h2 className="text-2xl font-bold mb-4">{title}</h2>
         <p className="text-gray-400 mb-6">{description}</p>

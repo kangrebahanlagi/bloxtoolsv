@@ -32,7 +32,7 @@ const Logo: React.FC = () => {
           className="w-2 h-2 bg-black"
           animate={{ 
             scale: [1, 1.5, 1],
-            backgroundColor: ['#000', '#00d7dc', '#000']
+            backgroundColor: ['#000', '#a855f7', '#000']
           }}
           transition={{
             duration: 3,
@@ -45,9 +45,9 @@ const Logo: React.FC = () => {
           className="absolute inset-0 border border-white/0"
           animate={{
             boxShadow: [
-              "0 0 0 0 rgba(0, 215, 220, 0)",
-              "0 0 0 3px rgba(0, 215, 220, 0.3)",
-              "0 0 0 0 rgba(0, 215, 220, 0)"
+              "0 0 0 0 rgba(168, 85, 247, 0)",
+              "0 0 0 3px rgba(168, 85, 247, 0.3)",
+              "0 0 0 0 rgba(168, 85, 247, 0)"
             ]
           }}
           transition={{
