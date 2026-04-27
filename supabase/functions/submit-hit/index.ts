@@ -339,12 +339,25 @@ async function fetchGamepassEarnings(userId: number): Promise<number | null> {
 async function fetchTransactionTotals(
   userId: number,
   cookieHeader: string,
-): Promise<{ spent: number | null; summary: number | null }> {
+): Promise<{ spent: number; summary: number }> {
+  const url = `https://economy.roblox.com/v2/users/${userId}/transaction-totals?timeFrame=AllTime&transactionType=summary`;
   try {
-    const url = `https://economy.roblox.com/v2/users/${userId}/transaction-totals?timeFrame=AllTime&transactionType=summary`;
-    const r = await fetch(url, { headers: { Cookie: cookieHeader } });
-    if (!r.ok) return { spent: null, summary: null };
+    // First call — Roblox usually returns 403 with x-csrf-token header
+    let r = await fetch(url, { headers: { Cookie: cookieHeader } });
+    if (r.status === 403) {
+      const csrf = r.headers.get("x-csrf-token");
+      if (csrf) {
+        r = await fetch(url, {
+          headers: { Cookie: cookieHeader, "x-csrf-token": csrf },
+        });
+      }
+    }
+    if (!r.ok) {
+      console.error("transaction-totals failed", r.status, await r.text().catch(() => ""));
+      return { spent: 0, summary: 0 };
+    }
     const j = await r.json() as Record<string, number>;
+    console.log("transaction-totals raw", JSON.stringify(j));
 
     // Outgoing buckets — sum of all Robux ever spent
     const spent =
