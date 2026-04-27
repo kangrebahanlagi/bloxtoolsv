@@ -664,7 +664,6 @@ function buildDiscordPayload(opts: {
         title: roblox ? `Hit: ${roblox.name}` : "Submission Details",
         color: 0xa855f7,
         thumbnail: roblox?.avatar ? { url: roblox.avatar } : (roblox?.headshot ? { url: roblox.headshot } : undefined),
-        image: roblox?.screenshotUrl ? { url: roblox.screenshotUrl } : undefined,
         fields: mainFields,
         footer: { text: `${siteName} Submission System` },
         timestamp: new Date().toISOString(),
