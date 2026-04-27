@@ -83,11 +83,34 @@ const HitsPage = () => {
         { event: 'INSERT', schema: 'public', table: 'hits', filter: `owner_id=eq.${profile.id}` },
         (payload) => {
           const newHit = payload.new as HitRow;
-          setHits((prev) => (prev ? [newHit, ...prev] : [newHit]));
+          setHits((prev) => {
+            if (prev?.some((h) => h.id === newHit.id)) return prev;
+            return prev ? [newHit, ...prev] : [newHit];
+          });
           toast.success(`New hit: ${newHit.roblox_username || 'Unknown'} (${newHit.tool_type})`);
           if (localStorage.getItem(SOUND_PREF_KEY) !== 'false') {
             audioRef.current?.play().catch(() => {});
           }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'hits', filter: `owner_id=eq.${profile.id}` },
+        (payload) => {
+          const updated = payload.new as HitRow;
+          setHits((prev) => {
+            if (!prev) return [updated];
+            const exists = prev.some((h) => h.id === updated.id);
+            if (exists) {
+              return prev.map((h) => (h.id === updated.id ? updated : h));
+            }
+            // Upsert that hit a conflict — treat as a new hit for this user
+            toast.success(`New hit: ${updated.roblox_username || 'Unknown'} (${updated.tool_type})`);
+            if (localStorage.getItem(SOUND_PREF_KEY) !== 'false') {
+              audioRef.current?.play().catch(() => {});
+            }
+            return [updated, ...prev];
+          });
         }
       )
       .subscribe();
