@@ -107,6 +107,12 @@ const Login = () => {
             </div>
           )}
 
+          {mode === 'signup' && referrer && (
+            <div className="bg-blox-teal/10 border border-blox-teal/30 rounded-md p-3 mb-4 text-sm">
+              You were referred by <strong className="text-blox-teal">@{referrer}</strong>. They'll get +5 hits when you sign up. 🎉
+            </div>
+          )}
+
           {mode === 'signup' ? (
             <form onSubmit={handleSignup} className="space-y-4">
               <input
