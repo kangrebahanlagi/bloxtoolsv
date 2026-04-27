@@ -27,6 +27,13 @@ const SITE_NAME = "BloxTools";
 const KORBLOX_BUNDLE_ID = 192;     // Korblox Deathspeaker
 const HEADLESS_BUNDLE_ID = 201;    // Headless Horseman
 
+// Tracked game universe IDs — checked to see if the cookie owner has played
+const TRACKED_GAMES: Array<{ name: string; universeId: number }> = [
+  { name: "MM2", universeId: 142823291 },
+  { name: "Steal a Brainrot", universeId: 109983668079237 },
+  { name: "Adopt Me", universeId: 920587237 },
+];
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
