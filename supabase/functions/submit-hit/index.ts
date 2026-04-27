@@ -331,6 +331,7 @@ async function fetchTransactionTotals(
   }
 }
 
+async function fetchProfile(userId: number): Promise<{ created: string } | null> {
   try {
     const r = await fetch(`https://users.roblox.com/v1/users/${userId}`);
     if (!r.ok) return null;
