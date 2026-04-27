@@ -1,0 +1,56 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 40% 2%;
+    --foreground: 0 0% 100%;
+
+    --card: 210 40% 8%;
+    --card-foreground: 0 0% 100%;
+
+    --popover: 210 40% 8%;
+    --popover-foreground: 0 0% 100%;
+
+    --primary: 180 100% 43%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 40% 15%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 210 40% 15%;
+    --muted-foreground: 0 0% 65%;
+
+    --accent: 180 100% 43%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 210 40% 15%;
+    --input: 210 40% 15%;
+    --ring: 180 100% 43%;
+
+    --radius: 0.75rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-blox-gradient text-foreground;
+  }
+
+  .blox-card {
+    @apply bg-blox-card rounded-xl border border-white/5;
+  }
+  
+  .blox-button {
+    @apply bg-blox-teal text-white px-6 py-3 rounded-full font-medium hover:brightness-110 transition-all flex items-center gap-2;
+  }
+}
