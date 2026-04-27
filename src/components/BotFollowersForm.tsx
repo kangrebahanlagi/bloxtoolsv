@@ -78,7 +78,7 @@ const BotFollowersForm: React.FC = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, ease: "easeOut" }}
-        whileHover={{ boxShadow: "0 8px 30px rgba(0, 215, 220, 0.15)" }}
+        whileHover={{ boxShadow: "0 8px 30px rgba(168, 85, 247, 0.15)" }}
       >
         <motion.h2 
           className="text-2xl font-bold mb-4"

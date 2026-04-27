@@ -94,7 +94,7 @@ const CopyClothes = () => {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.2, duration: 0.5 }}
-              whileHover={{ boxShadow: "0 8px 30px rgba(0, 215, 220, 0.15)" }}
+              whileHover={{ boxShadow: "0 8px 30px rgba(168, 85, 247, 0.15)" }}
             >
               <motion.h2 className="text-2xl font-bold mb-4">Clothing Copier</motion.h2>
               <motion.p className="text-gray-400 mb-6">

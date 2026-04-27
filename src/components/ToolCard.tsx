@@ -27,7 +27,7 @@ const ToolCard: React.FC<ToolCardProps> = ({
   return (
     <motion.div 
       className="blox-card h-full flex flex-col"
-      whileHover={{ y: -8, boxShadow: '0 15px 30px rgba(0, 215, 220, 0.2)' }}
+      whileHover={{ y: -8, boxShadow: '0 15px 30px rgba(168, 85, 247, 0.2)' }}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: "easeOut" }}

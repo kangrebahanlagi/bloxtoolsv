@@ -42,7 +42,7 @@ const Logo: React.FC = () => {
         className="w-1.5 h-1.5 bg-black"
         animate={{ 
           scale: [1, 1.5, 1],
-          backgroundColor: ['#000', '#00d7dc', '#000']
+          backgroundColor: ['#000', '#a855f7', '#000']
         }}
         transition={{
           duration: 2,
