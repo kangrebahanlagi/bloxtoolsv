@@ -64,12 +64,12 @@ export default {
 					ring: 'hsl(var(--sidebar-ring))'
 				},
 				blox: {
-					teal: '#00d7dc',
+					teal: '#a855f7',
 					dark: '#111111',
 					card: '#121212',
 					gradient: {
 						from: '#121212',
-						to: '#143736',
+						to: '#2a1245',
 					},
 				},
 			},
