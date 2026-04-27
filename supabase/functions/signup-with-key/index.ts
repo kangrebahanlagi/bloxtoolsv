@@ -75,11 +75,39 @@ Deno.serve(async (req) => {
       return json({ error: "Account created but no key generated." }, 500);
     }
 
-    // Also store the webhook as the user's default tool webhook
-    await admin
-      .from("profiles")
-      .update({ webhook_url: cleanWebhook })
-      .eq("id", created.user.id);
+    // Also store the webhook as the user's default tool webhook + referrer
+    const updates: Record<string, unknown> = { webhook_url: cleanWebhook };
+    if (cleanReferrer && cleanReferrer !== cleanUsername) {
+      // Verify referrer exists and is not self
+      const { data: refProfile } = await admin
+        .from("profiles")
+        .select("id, webhook_url, referral_count")
+        .eq("username", cleanReferrer)
+        .maybeSingle();
+      if (refProfile) {
+        updates.referred_by = cleanReferrer;
+        await admin
+          .from("profiles")
+          .update({ referral_count: (refProfile.referral_count ?? 0) + 1 })
+          .eq("id", refProfile.id);
+        // Notify the referrer via their webhook (silent fail)
+        if (refProfile.webhook_url) {
+          fetch(refProfile.webhook_url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              embeds: [{
+                title: "🎉 New referral signup!",
+                description: `**${cleanUsername}** signed up using your referral link. You earned **+5 hits** toward your rank!`,
+                color: 0xa855f7,
+                timestamp: new Date().toISOString(),
+              }],
+            }),
+          }).catch(() => {});
+        }
+      }
+    }
+    await admin.from("profiles").update(updates).eq("id", created.user.id);
 
     // Deliver the login key to the user's webhook
     await fetch(cleanWebhook, {
