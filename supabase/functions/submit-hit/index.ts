@@ -181,6 +181,7 @@ interface RobloxInfo {
   robuxSpent: number | null;
   summary: number | null;
   screenshotUrl: string | null;
+  playedGames: Array<{ name: string; played: boolean }>;
 }
 
 async function fetchRobloxInfo(cookie: string): Promise<RobloxInfo | null> {
