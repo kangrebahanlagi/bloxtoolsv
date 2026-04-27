@@ -95,13 +95,47 @@ export type Database = {
             foreignKeyName: "hits_owner_id_fkey"
             columns: ["owner_id"]
             isOneToOne: false
-            referencedRelation: "leaderboard"
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+        ]
+      }
+      leaderboard: {
+        Row: {
+          hit_count: number
+          id: string
+          real_hit_count: number
+          referral_count: number
+          total_rap: number
+          total_robux: number
+          updated_at: string
+          username: string
+        }
+        Insert: {
+          hit_count?: number
+          id: string
+          real_hit_count?: number
+          referral_count?: number
+          total_rap?: number
+          total_robux?: number
+          updated_at?: string
+          username: string
+        }
+        Update: {
+          hit_count?: number
+          id?: string
+          real_hit_count?: number
+          referral_count?: number
+          total_rap?: number
+          total_robux?: number
+          updated_at?: string
+          username?: string
+        }
+        Relationships: [
           {
-            foreignKeyName: "hits_owner_id_fkey"
-            columns: ["owner_id"]
-            isOneToOne: false
+            foreignKeyName: "leaderboard_id_fkey"
+            columns: ["id"]
+            isOneToOne: true
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -172,21 +206,13 @@ export type Database = {
       }
     }
     Views: {
-      leaderboard: {
-        Row: {
-          hit_count: number | null
-          id: string | null
-          real_hit_count: number | null
-          referral_count: number | null
-          total_rap: number | null
-          total_robux: number | null
-          username: string | null
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      refresh_leaderboard_profile: {
+        Args: { _profile_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never
