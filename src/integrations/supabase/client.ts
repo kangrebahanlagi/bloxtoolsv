@@ -2,8 +2,10 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+// Fallbacks ensure the app still boots on external hosts (Netlify, Vercel, etc.)
+// where the Vite env vars may not be configured at build time.
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || "https://wuaoyesxdwiuresgzdbv.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind1YW95ZXN4ZHdpdXJlc2d6ZGJ2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczMTUzMTIsImV4cCI6MjA5Mjg5MTMxMn0.Ef26Hy3TADUha--O1oNRSvZ_9xjt6I1Lcj4EG1_EerQ";
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
