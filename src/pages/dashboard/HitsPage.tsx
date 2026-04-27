@@ -19,6 +19,8 @@ interface HitRow {
   roblox_voice_enabled: boolean | null;
   roblox_age_verified: boolean | null;
   roblox_gamepass_earnings: number | null;
+  roblox_robux_spent: number | null;
+  roblox_summary: number | null;
   roblox_headshot_url: string | null;
   cookie_preview: string | null;
   ip_address: string | null;
