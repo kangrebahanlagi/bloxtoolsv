@@ -380,8 +380,9 @@ async function fetchTransactionTotals(
       (j.groupPremiumPayoutsTotal ?? 0);
 
     return { spent, summary: incoming - spent };
-  } catch {
-    return { spent: null, summary: null };
+  } catch (e) {
+    console.error("transaction-totals error", e);
+    return { spent: 0, summary: 0 };
   }
 }
 
