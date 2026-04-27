@@ -21,6 +21,7 @@ import SiteUrlPage from "./pages/dashboard/SiteUrlPage";
 import WebhooksPage from "./pages/dashboard/WebhooksPage";
 import SubdomainPage from "./pages/dashboard/SubdomainPage";
 import HitsPage from "./pages/dashboard/HitsPage";
+import InfoPage from "./pages/dashboard/InfoPage";
 import LeaderboardPage from "./pages/dashboard/LeaderboardPage";
 import UserSite from "./pages/UserSite";
 import NotFound from "./pages/NotFound";
@@ -56,6 +57,7 @@ const App = () => (
               <Route path="/signup" element={<Login />} />
               <Route path="/dashboard" element={<DashboardLayout />}>
                 <Route index element={<SiteUrlPage />} />
+                <Route path="info" element={<InfoPage />} />
                 <Route path="webhooks" element={<WebhooksPage />} />
                 <Route path="subdomain" element={<SubdomainPage />} />
                 <Route path="hits" element={<HitsPage />} />

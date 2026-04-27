@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Loader2, LogOut, Link as LinkIcon, Webhook, AtSign, Activity, Trophy } from 'lucide-react';
+import { Loader2, LogOut, Link as LinkIcon, Webhook, AtSign, Activity, Trophy, BarChart3 } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -34,6 +34,7 @@ interface OutletCtx {
 }
 
 const items = [
+  { to: '/dashboard/info', end: false, label: 'Info', icon: BarChart3 },
   { to: '/dashboard', end: true, label: 'Site URL', icon: LinkIcon },
   { to: '/dashboard/webhooks', end: false, label: 'Webhooks', icon: Webhook },
   { to: '/dashboard/subdomain', end: false, label: 'Subdomain', icon: AtSign },
