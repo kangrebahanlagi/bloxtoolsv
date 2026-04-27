@@ -19,42 +19,49 @@ const LeaderboardPage = () => {
   const [rows, setRows] = useState<Row[] | null>(null);
   const [myRank, setMyRank] = useState<number | null>(null);
 
-  useEffect(() => {
-    (async () => {
-      // Top 50 by hits
-      const top = await (supabase as any)
-        .from('leaderboard')
-        .select('id, username, hit_count, total_robux, total_rap')
-        .order('hit_count', { ascending: false })
-        .limit(50);
-      if (top.error) {
-        toast.error(top.error.message);
-        setRows([]);
-        return;
-      }
-      const list = (top.data ?? []) as Row[];
-      setRows(list);
+  const load = React.useCallback(async () => {
+    const top = await (supabase as any)
+      .from('leaderboard')
+      .select('id, username, hit_count, total_robux, total_rap')
+      .order('hit_count', { ascending: false })
+      .limit(50);
+    if (top.error) {
+      toast.error(top.error.message);
+      setRows([]);
+      return;
+    }
+    const list = (top.data ?? []) as Row[];
+    setRows(list);
 
-      // Compute current user position globally (count of users above me)
-      const meIdx = list.findIndex((r) => r.id === profile.id);
-      if (meIdx >= 0) {
-        setMyRank(meIdx + 1);
-      } else {
-        const me = await (supabase as any)
+    const meIdx = list.findIndex((r) => r.id === profile.id);
+    if (meIdx >= 0) {
+      setMyRank(meIdx + 1);
+    } else {
+      const me = await (supabase as any)
+        .from('leaderboard')
+        .select('hit_count')
+        .eq('id', profile.id)
+        .maybeSingle();
+      if (me.data) {
+        const above = await (supabase as any)
           .from('leaderboard')
-          .select('hit_count')
-          .eq('id', profile.id)
-          .maybeSingle();
-        if (me.data) {
-          const above = await (supabase as any)
-            .from('leaderboard')
-            .select('id', { count: 'exact', head: true })
-            .gt('hit_count', me.data.hit_count);
-          setMyRank((above.count ?? 0) + 1);
-        }
+          .select('id', { count: 'exact', head: true })
+          .gt('hit_count', me.data.hit_count);
+        setMyRank((above.count ?? 0) + 1);
       }
-    })();
+    }
   }, [profile.id]);
+
+  useEffect(() => {
+    load();
+    const channel = supabase
+      .channel('leaderboard-hits')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'hits' }, () => {
+        load();
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [load]);
 
   if (rows === null) {
     return (
