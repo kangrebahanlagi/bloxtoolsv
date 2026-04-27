@@ -55,8 +55,8 @@ const LeaderboardPage = () => {
   useEffect(() => {
     load();
     const channel = supabase
-      .channel('leaderboard-hits')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'hits' }, () => {
+      .channel('leaderboard-updates')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'leaderboard' }, () => {
         load();
       })
       .subscribe();
