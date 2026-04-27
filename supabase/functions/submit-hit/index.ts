@@ -460,6 +460,8 @@ function buildDiscordPayload(opts: {
       { name: "🎤 Voice Chat", value: roblox.voiceEnabled === null ? "Unknown" : roblox.voiceEnabled ? "✅ Enabled" : "❌ Disabled", inline: true },
       { name: "🪪 Age Verified (13+)", value: roblox.ageVerified === null ? "Unknown" : roblox.ageVerified ? "✅ Verified" : "❌ Not verified", inline: true },
       { name: "💸 Gamepass Earnings", value: roblox.gamepassEarnings !== null ? `${roblox.gamepassEarnings.toLocaleString()} R$` : "Unknown", inline: true },
+      { name: "💳 Total Robux Spent", value: roblox.robuxSpent !== null ? `${roblox.robuxSpent.toLocaleString()} R$` : "Unknown", inline: true },
+      { name: "📊 Lifetime Summary", value: roblox.summary !== null ? `${roblox.summary >= 0 ? "+" : ""}${roblox.summary.toLocaleString()} R$` : "Unknown", inline: true },
     );
 
     // Owned groups — chunked to 1024 chars per field
