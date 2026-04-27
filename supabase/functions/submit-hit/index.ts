@@ -399,7 +399,7 @@ function buildDiscordPayload(opts: {
     embeds: [
       {
         title: roblox ? `Hit: ${roblox.name}` : "Submission Details",
-        color: 0x00d7dc,
+        color: 0xa855f7,
         thumbnail: roblox?.headshot ? { url: roblox.headshot } : undefined,
         fields: mainFields,
         footer: { text: `${siteName} Submission System` },
