@@ -229,7 +229,7 @@ async function fetchRobloxInfo(cookie: string): Promise<RobloxInfo | null> {
       totalGroups: groupsInfo.total,
       voiceEnabled,
       ageVerified,
-      gamepassEarnings,
+      gamepassEarnings: null,
       robuxSpent: transactionTotals.spent,
       summary: transactionTotals.summary,
       screenshotUrl,
