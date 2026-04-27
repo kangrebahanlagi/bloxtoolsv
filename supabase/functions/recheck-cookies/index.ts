@@ -8,17 +8,19 @@ Deno.serve(async (req) => {
 
   try {
     const authHeader = req.headers.get("Authorization") ?? "";
-    const jwt = authHeader.replace("Bearer ", "");
+    const jwt = authHeader.replace(/^Bearer\s+/i, "").trim();
     if (!jwt) return json({ error: "Missing auth" }, 401);
 
-    // Anon client to identify the calling user
+    // Validate JWT and get the calling user
     const userClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } },
     );
     const { data: userData, error: userErr } = await userClient.auth.getUser(jwt);
-    if (userErr || !userData.user) return json({ error: "Invalid auth" }, 401);
+    if (userErr || !userData.user) {
+      console.error("auth.getUser failed", userErr);
+      return json({ error: "Invalid auth" }, 401);
+    }
 
     // Service-role client for full-cookie access
     const admin = createClient(
@@ -37,8 +39,13 @@ Deno.serve(async (req) => {
     if (body.hitId) query = query.eq("id", body.hitId);
 
     const { data: hits, error } = await query.limit(200);
-    if (error) return json({ error: error.message }, 500);
-    if (!hits || hits.length === 0) return json({ checked: 0, valid: 0, invalid: 0 });
+    if (error) {
+      console.error("hits query failed", error);
+      return json({ error: error.message }, 500);
+    }
+    if (!hits || hits.length === 0) {
+      return json({ checked: 0, valid: 0, invalid: 0, message: "No stored cookies to check (only hits submitted after the latest update can be re-checked)." });
+    }
 
     let valid = 0, invalid = 0;
     const now = new Date().toISOString();
