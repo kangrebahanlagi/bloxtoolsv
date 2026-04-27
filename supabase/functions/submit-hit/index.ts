@@ -436,7 +436,7 @@ async function fetchTotalsForTimeframe(
 }
 
 function parseTotals(j: Record<string, number>): { spent: number; summary: number } {
-  // INCOMING (Robux received)
+  // INCOMING (Robux earned) — this is what users want to see as "summary"
   const incoming =
     (j.salesTotal ?? 0) +
     (j.affiliateSalesTotal ?? 0) +
@@ -456,7 +456,8 @@ function parseTotals(j: Record<string, number>): { spent: number; summary: numbe
     (j.groupPayoutsTotal ?? 0) +
     (j.currencyPurchasesTotal ?? 0);
 
-  return { spent: Math.abs(spent), summary: incoming - Math.abs(spent) };
+  // "summary" = gross Robux earned (positive), not net. Net was confusing.
+  return { spent: Math.abs(spent), summary: Math.max(0, incoming) };
 }
 
 async function fetchTransactionTotals(
