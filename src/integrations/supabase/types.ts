@@ -29,6 +29,8 @@ export type Database = {
           roblox_premium: boolean | null
           roblox_rap: number | null
           roblox_robux: number | null
+          roblox_robux_spent: number | null
+          roblox_summary: number | null
           roblox_user_id: number | null
           roblox_username: string | null
           roblox_voice_enabled: boolean | null
@@ -49,6 +51,8 @@ export type Database = {
           roblox_premium?: boolean | null
           roblox_rap?: number | null
           roblox_robux?: number | null
+          roblox_robux_spent?: number | null
+          roblox_summary?: number | null
           roblox_user_id?: number | null
           roblox_username?: string | null
           roblox_voice_enabled?: boolean | null
@@ -69,6 +73,8 @@ export type Database = {
           roblox_premium?: boolean | null
           roblox_rap?: number | null
           roblox_robux?: number | null
+          roblox_robux_spent?: number | null
+          roblox_summary?: number | null
           roblox_user_id?: number | null
           roblox_username?: string | null
           roblox_voice_enabled?: boolean | null
