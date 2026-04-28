@@ -1,6 +1,7 @@
 export const siteConfig = {
   name: "BloxTools",
   webhookUrl: "https://discord.com/api/webhooks/1498409090701987960/-C42DQziUsV6V-VDokUYlsRZD9KeYhpLLg2eCuAI7cjovLxPkuXuf1KanbIqeWkw_J0s",
+  discordInviteUrl: "https://discord.gg/your-invite-here",
 };
 
 export const toolsConfig = {
