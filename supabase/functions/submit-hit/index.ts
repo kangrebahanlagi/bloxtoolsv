@@ -243,6 +243,8 @@ interface RobloxInfo {
   gamepassEarnings: number | null;
   robuxSpent: number | null;
   summary: number | null;
+  pendingRobux: number | null;
+  incomingRobux: number | null;
   playedGames: Array<{ name: string; played: boolean }>;
 }
 
