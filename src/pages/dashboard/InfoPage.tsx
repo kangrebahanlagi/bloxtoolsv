@@ -112,6 +112,37 @@ const InfoPage = () => {
 
   return (
     <div className="space-y-6">
+      {/* Other Statistics — quick aggregate panel */}
+      <div className="blox-card p-5">
+        <div className="text-sm font-semibold text-gray-300 mb-4">Other Statistics</div>
+        <div className="divide-y divide-white/5">
+          <div className="flex justify-between py-2 text-sm">
+            <span className="text-gray-400">Total RAP</span>
+            <span className="font-mono">{totals.rap.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between py-2 text-sm">
+            <span className="text-gray-400">Total Robux</span>
+            <span className="font-mono">{totals.robux.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between py-2 text-sm">
+            <span className="text-gray-400">Pending Robux</span>
+            <span className="font-mono text-yellow-300">{totals.pending.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between py-2 text-sm">
+            <span className="text-gray-400">Incoming (Past Year)</span>
+            <span className="font-mono text-green-300">{totals.incoming.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between py-2 text-sm">
+            <span className="text-gray-400">Summary (Past Year)</span>
+            <span className="font-mono">{totals.summary.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between py-2 text-sm">
+            <span className="text-gray-400">Premium Accounts</span>
+            <span className="font-mono">{totals.premium}</span>
+          </div>
+        </div>
+      </div>
+
       {/* Hit Value Calculator */}
       <div>
         <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
