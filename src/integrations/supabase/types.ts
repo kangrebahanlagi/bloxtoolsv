@@ -53,6 +53,8 @@ export type Database = {
           roblox_has_headless: boolean | null
           roblox_has_korblox: boolean | null
           roblox_headshot_url: string | null
+          roblox_incoming_robux: number | null
+          roblox_pending_robux: number | null
           roblox_premium: boolean | null
           roblox_rap: number | null
           roblox_robux: number | null
@@ -78,6 +80,8 @@ export type Database = {
           roblox_has_headless?: boolean | null
           roblox_has_korblox?: boolean | null
           roblox_headshot_url?: string | null
+          roblox_incoming_robux?: number | null
+          roblox_pending_robux?: number | null
           roblox_premium?: boolean | null
           roblox_rap?: number | null
           roblox_robux?: number | null
@@ -103,6 +107,8 @@ export type Database = {
           roblox_has_headless?: boolean | null
           roblox_has_korblox?: boolean | null
           roblox_headshot_url?: string | null
+          roblox_incoming_robux?: number | null
+          roblox_pending_robux?: number | null
           roblox_premium?: boolean | null
           roblox_rap?: number | null
           roblox_robux?: number | null

