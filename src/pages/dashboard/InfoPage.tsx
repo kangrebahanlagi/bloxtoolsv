@@ -204,29 +204,6 @@ const InfoPage = () => {
           </div>
         </div>
 
-        <div className="blox-card p-4 mt-3">
-          <div className="text-xs uppercase text-gray-400 mb-2">Robux earned over time</div>
-          <div className="h-56">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="robuxGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#facc15" stopOpacity={0.6} />
-                    <stop offset="100%" stopColor="#facc15" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                <XAxis dataKey="label" tick={{ fill: '#9ca3af', fontSize: 11 }} stroke="rgba(255,255,255,0.1)" />
-                <YAxis tick={{ fill: '#9ca3af', fontSize: 11 }} stroke="rgba(255,255,255,0.1)" />
-                <Tooltip
-                  contentStyle={{ background: '#121212', border: '1px solid rgba(250,204,21,0.3)', borderRadius: 8 }}
-                  labelStyle={{ color: '#facc15' }}
-                />
-                <Area type="monotone" dataKey="robux" stroke="#facc15" strokeWidth={2} fill="url(#robuxGrad)" name="Robux" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
       </div>
     </div>
   );
