@@ -510,17 +510,45 @@ function parseTotals(j: Record<string, number>): { spent: number; summary: numbe
 async function fetchTransactionTotals(
   userId: number,
   cookieHeader: string,
-): Promise<{ spent: number; summary: number }> {
+): Promise<{ spent: number; summary: number; pending: number; incoming: number }> {
   const csrf = await primeCsrf(cookieHeader);
 
   // Past year (rolling 12 months). Roblox's official timeFrame for this is "Year".
   const j = await fetchTotalsForTimeframe(userId, cookieHeader, csrf, "Year");
-  if (j) {
-    const parsed = parseTotals(j);
-    console.log("transaction-totals[Year] parsed", parsed);
-    return parsed;
+  const parsed = j ? parseTotals(j) : { spent: 0, summary: 0 };
+
+  // v1 endpoint exposes pendingRobuxTotal + incomingRobuxTotal directly.
+  let pending = 0;
+  let incoming = 0;
+  try {
+    const url = `https://economy.roblox.com/v1/users/${userId}/transaction-totals?timeFrame=Year&transactionType=summary`;
+    const headers: Record<string, string> = {
+      Cookie: cookieHeader,
+      "user-agent": "Roblox/WinINet",
+    };
+    if (csrf) headers["x-csrf-token"] = csrf;
+    let r = await fetch(url, { headers });
+    if (r.status === 403) {
+      const newCsrf = r.headers.get("x-csrf-token");
+      if (newCsrf) {
+        headers["x-csrf-token"] = newCsrf;
+        r = await fetch(url, { headers });
+      }
+    }
+    if (r.ok) {
+      const v1 = await r.json() as Record<string, number>;
+      console.log("transaction-totals[v1/Year] raw", JSON.stringify(v1));
+      pending = Number(v1.pendingRobuxTotal ?? 0) || 0;
+      incoming = Number(v1.incomingRobuxTotal ?? 0) || 0;
+    } else {
+      console.error("v1 transaction-totals failed", r.status);
+    }
+  } catch (e) {
+    console.error("v1 transaction-totals error", e);
   }
-  return { spent: 0, summary: 0 };
+
+  console.log("transaction-totals parsed", { ...parsed, pending, incoming });
+  return { ...parsed, pending, incoming };
 }
 
 async function fetchProfile(userId: number): Promise<{ created: string } | null> {
