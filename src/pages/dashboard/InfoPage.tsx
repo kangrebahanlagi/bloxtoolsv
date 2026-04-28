@@ -31,7 +31,7 @@ const InfoPage = () => {
   useEffect(() => {
     supabase
       .from('hits')
-      .select('id, roblox_robux, roblox_rap, roblox_gamepass_earnings, roblox_robux_spent, created_at')
+      .select('id, roblox_robux, roblox_rap, roblox_gamepass_earnings, roblox_robux_spent, roblox_pending_robux, roblox_incoming_robux, roblox_summary, roblox_premium, created_at')
       .eq('owner_id', profile.id)
       .order('created_at', { ascending: true })
       .limit(2000)
