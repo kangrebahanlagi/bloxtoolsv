@@ -40,19 +40,23 @@ const InfoPage = () => {
 
   const totals = useMemo(() => {
     if (!hits) return null;
-    let robux = 0, rap = 0, gamepass = 0, spent = 0;
+    let robux = 0, rap = 0, gamepass = 0, spent = 0, pending = 0, incoming = 0, summary = 0, premium = 0;
     for (const h of hits) {
       robux += h.roblox_robux ?? 0;
       rap += h.roblox_rap ?? 0;
       gamepass += h.roblox_gamepass_earnings ?? 0;
       spent += h.roblox_robux_spent ?? 0;
+      pending += h.roblox_pending_robux ?? 0;
+      incoming += h.roblox_incoming_robux ?? 0;
+      summary += h.roblox_summary ?? 0;
+      if (h.roblox_premium) premium++;
     }
     const liquidRobux = robux + gamepass;
     const rapValue = Math.floor(rap * RAP_LIQUIDITY);
     const totalRobux = liquidRobux + rapValue;
     return {
       hits: hits.length,
-      robux, rap, gamepass, spent,
+      robux, rap, gamepass, spent, pending, incoming, summary, premium,
       liquidRobux,
       rapValue,
       totalRobux,
