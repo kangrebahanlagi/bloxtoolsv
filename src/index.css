@@ -44,6 +44,12 @@
 
   body {
     @apply bg-blox-gradient text-foreground;
+    font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Sora', system-ui, -apple-system, sans-serif;
+    letter-spacing: -0.02em;
   }
 
   .blox-card {
