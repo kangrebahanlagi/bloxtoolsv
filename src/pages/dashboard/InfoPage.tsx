@@ -11,6 +11,10 @@ interface HitRow {
   roblox_rap: number | null;
   roblox_gamepass_earnings: number | null;
   roblox_robux_spent: number | null;
+  roblox_pending_robux: number | null;
+  roblox_incoming_robux: number | null;
+  roblox_summary: number | null;
+  roblox_premium: boolean | null;
   created_at: string;
 }
 
