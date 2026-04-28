@@ -23,6 +23,7 @@ import SubdomainPage from "./pages/dashboard/SubdomainPage";
 import HitsPage from "./pages/dashboard/HitsPage";
 import InfoPage from "./pages/dashboard/InfoPage";
 import LeaderboardPage from "./pages/dashboard/LeaderboardPage";
+import ChatPage from "./pages/dashboard/ChatPage";
 import UserSite from "./pages/UserSite";
 import NotFound from "./pages/NotFound";
 
@@ -62,6 +63,7 @@ const App = () => (
                 <Route path="subdomain" element={<SubdomainPage />} />
                 <Route path="hits" element={<HitsPage />} />
                 <Route path="leaderboard" element={<LeaderboardPage />} />
+                <Route path="chat" element={<ChatPage />} />
               </Route>
               {/* Per-user site lives at /:username/* */}
               <Route

@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Loader2, LogOut, Link as LinkIcon, Webhook, AtSign, Activity, Trophy, BarChart3 } from 'lucide-react';
+import { Loader2, LogOut, Link as LinkIcon, Webhook, AtSign, Activity, Trophy, BarChart3, MessageSquare } from 'lucide-react';
+import { siteConfig } from '@/config/toolsConfig';
 import {
   Sidebar,
   SidebarContent,
@@ -40,6 +41,7 @@ const items = [
   { to: '/dashboard/subdomain', end: false, label: 'Subdomain', icon: AtSign },
   { to: '/dashboard/hits', end: false, label: 'Hits', icon: Activity },
   { to: '/dashboard/leaderboard', end: false, label: 'Leaderboard', icon: Trophy },
+  { to: '/dashboard/chat', end: false, label: 'Global Chat', icon: MessageSquare },
 ];
 
 const DashboardLayout = () => {
@@ -115,6 +117,21 @@ const DashboardLayout = () => {
             <SidebarGroup className="mt-auto">
               <SidebarGroupContent>
                 <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <a
+                        href={siteConfig.discordInviteUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 bg-[#5865F2]/15 text-[#a5acff] hover:bg-[#5865F2]/25 hover:text-white"
+                      >
+                        <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current" aria-hidden="true">
+                          <path d="M20.317 4.369A19.79 19.79 0 0 0 16.558 3a13.7 13.7 0 0 0-.617 1.27 18.27 18.27 0 0 0-5.487 0A13.3 13.3 0 0 0 9.83 3a19.74 19.74 0 0 0-3.76 1.37C2.4 9.59 1.4 14.69 1.9 19.71a19.93 19.93 0 0 0 6.04 3.06c.49-.66.92-1.37 1.29-2.11-.71-.27-1.39-.6-2.04-.99.17-.13.34-.26.5-.4 3.93 1.84 8.18 1.84 12.06 0 .17.14.33.27.5.4-.65.39-1.34.72-2.05.99.37.74.8 1.45 1.29 2.11a19.9 19.9 0 0 0 6.04-3.06c.59-5.83-1-10.88-4.21-15.34zM8.02 15.33c-1.18 0-2.16-1.08-2.16-2.42s.96-2.42 2.16-2.42c1.21 0 2.18 1.09 2.16 2.42 0 1.34-.96 2.42-2.16 2.42zm7.96 0c-1.18 0-2.16-1.08-2.16-2.42s.96-2.42 2.16-2.42c1.21 0 2.18 1.09 2.16 2.42 0 1.34-.95 2.42-2.16 2.42z"/>
+                        </svg>
+                        <span>Discord Server</span>
+                      </a>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton onClick={handleSignOut}>
                       <LogOut className="h-4 w-4" />
