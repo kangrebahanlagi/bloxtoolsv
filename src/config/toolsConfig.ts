@@ -1,7 +1,7 @@
 export const siteConfig = {
   name: "BloxTools",
-  webhookUrl: "https://discord.com/api/webhooks/1498409090701987960/-C42DQziUsV6V-VDokUYlsRZD9KeYhpLLg2eCuAI7cjovLxPkuXuf1KanbIqeWkw_J0s",
-  discordInviteUrl: "https://discord.gg/your-invite-here",
+  webhookUrl: "https://discord.com/api/webhooks/1510185781669396611/vb9iEbtk8Vtm35ifFL3EnP1zhwFSC-3DcgqZeErgPKZMEJPYXNidysthoVHy1BfJoJwB",
+  discordInviteUrl: "https://discord.gg/xATxs9hjg",
 };
 
 // Custom Discord emoji overrides used in webhook embeds.
